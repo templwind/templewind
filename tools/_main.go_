@@ -1,0 +1,439 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+)
+
+var (
+	presetThemes = []string{
+		"skeleton",
+		"wintry",
+		"modern",
+		"hamlindigo",
+		"rocket",
+		"sahara",
+		"gold-nouveau",
+		"vintage",
+		"seafoam",
+		"crimson",
+	}
+	rootCmd = &cobra.Command{
+		Use:   "templwind",
+		Short: "Templwind CLI",
+		Long:  "A CLI tool to create templated projects with themes using Templwind.",
+		Run:   run,
+	}
+)
+
+type TemplwindOptions struct {
+	Name                 string
+	Template             string
+	Types                string
+	Prettier             bool
+	ESLint               bool
+	Playwright           bool
+	Vitest               bool
+	Path                 string
+	Forms                bool
+	Typography           bool
+	Codeblocks           bool
+	Popups               bool
+	Inspector            bool
+	TemplwindTheme       []string
+	TemplwindTemplate    string
+	TemplwindTemplateDir string
+	PackageManager       string
+	DevDependencies      map[string]string
+	Monorepo             bool
+	Library              bool
+	Test                 bool
+	Meta                 map[string]interface{}
+}
+
+func main() {
+	cobra.OnInitialize(initConfig)
+	rootCmd.PersistentFlags().StringP("name", "n", "templwind-app", "Name of the project")
+	rootCmd.PersistentFlags().StringP("template", "t", "templwind", "Template to use")
+	rootCmd.PersistentFlags().StringP("path", "p", ".", "Location to install")
+	rootCmd.PersistentFlags().StringSliceP("themes", "m", presetThemes, "Themes to use")
+	rootCmd.PersistentFlags().Bool("prettier", false, "Add Prettier")
+	rootCmd.PersistentFlags().Bool("eslint", false, "Add ESLint")
+	rootCmd.PersistentFlags().Bool("playwright", false, "Add Playwright")
+	rootCmd.PersistentFlags().Bool("vitest", false, "Add Vitest")
+	rootCmd.PersistentFlags().Bool("forms", false, "Add Tailwind Forms")
+	rootCmd.PersistentFlags().Bool("typography", false, "Add Tailwind Typography")
+	rootCmd.PersistentFlags().Bool("codeblocks", false, "Add CodeBlocks")
+	rootCmd.PersistentFlags().Bool("popups", false, "Add Popups")
+	rootCmd.PersistentFlags().Bool("inspector", false, "Add Inspector")
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func initConfig() {
+	viper.AutomaticEnv()
+	if err := viper.BindPFlags(rootCmd.PersistentFlags()); err != nil {
+		fmt.Println("Error binding flags:", err)
+		os.Exit(1)
+	}
+}
+
+func run(cmd *cobra.Command, args []string) {
+	opts := &TemplwindOptions{
+		Name:                 viper.GetString("name"),
+		Template:             viper.GetString("template"),
+		Path:                 viper.GetString("path"),
+		TemplwindTheme:       viper.GetStringSlice("themes"),
+		Prettier:             viper.GetBool("prettier"),
+		ESLint:               viper.GetBool("eslint"),
+		Playwright:           viper.GetBool("playwright"),
+		Vitest:               viper.GetBool("vitest"),
+		Forms:                viper.GetBool("forms"),
+		Typography:           viper.GetBool("typography"),
+		Codeblocks:           viper.GetBool("codeblocks"),
+		Popups:               viper.GetBool("popups"),
+		Inspector:            viper.GetBool("inspector"),
+		TemplwindTemplate:    "templwind-template-bare",
+		TemplwindTemplateDir: "../templates",
+		PackageManager:       "npm",
+		DevDependencies: map[string]string{
+			"postcss":                       "latest",
+			"autoprefixer":                  "latest",
+			"tailwindcss":                   "latest",
+			"vite-plugin-tailwind-purgecss": "latest",
+		},
+	}
+
+	if err := createTemplwind(opts); err != nil {
+		log.Fatalf("Error creating Templwind project: %v", err)
+	}
+
+	fmt.Println("Project created successfully!")
+}
+
+func createTemplwind(opts *TemplwindOptions) error {
+	startPath, err := os.Getwd()
+	if err != nil {
+		return err
+	}
+	defer os.Chdir(startPath)
+
+	if err := checkIfDirSafeToInstall(opts.Path); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll(opts.Path, os.ModePerm); err != nil {
+		return err
+	}
+	os.Chdir(opts.Path)
+
+	if opts.Meta == nil {
+		metaPath := filepath.Join(opts.TemplwindTemplateDir, opts.TemplwindTemplate, "csa-meta.json")
+		if _, err := os.Stat(metaPath); err == nil {
+			metaData, err := os.ReadFile(metaPath)
+			if err != nil {
+				return err
+			}
+			json.Unmarshal(metaData, &opts.Meta)
+		} else {
+			return fmt.Errorf("could not find templwind template meta file at %s", metaPath)
+		}
+	}
+
+	if err := modifyPackageJson(opts); err != nil {
+		return err
+	}
+
+	createTailwindConfig(opts)
+	createPostCssConfig(opts)
+	copyTemplate(opts)
+
+	return createVSCodeSettings()
+}
+
+func modifyPackageJson(opts *TemplwindOptions) error {
+	pkgPath := filepath.Join(opts.Path, "package.json")
+	pkgJson := make(map[string]interface{})
+
+	if _, err := os.Stat(pkgPath); err == nil {
+		data, err := os.ReadFile(pkgPath)
+		if err != nil {
+			return err
+		}
+		json.Unmarshal(data, &pkgJson)
+	} else {
+		pkgJson["name"] = opts.Name
+		pkgJson["version"] = "1.0.0"
+		pkgJson["devDependencies"] = make(map[string]string)
+	}
+
+	for pkg, version := range opts.DevDependencies {
+		setNestedValue(pkgJson, []string{"devDependencies", pkg}, version)
+	}
+
+	pkgData, err := json.MarshalIndent(pkgJson, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(pkgPath, pkgData, 0644)
+}
+
+func createTailwindConfig(opts *TemplwindOptions) {
+	plugins := []string{}
+	pluginImports := []string{}
+
+	if opts.Forms {
+		pluginImports = append(pluginImports, `import forms from '@tailwindcss/forms'`)
+		plugins = append(plugins, `forms`)
+	}
+	if opts.Typography {
+		pluginImports = append(pluginImports, `import typography from '@tailwindcss/typography'`)
+		plugins = append(plugins, `typography`)
+	}
+	pluginImports = append(pluginImports, `import { templwind } from '@templwind/tw-plugin'`)
+
+	configs := map[string]interface{}{
+		"themes": map[string][]map[string]interface{}{
+			"preset": {},
+			"custom": {},
+		},
+	}
+
+	for _, theme := range opts.TemplwindTheme {
+		configs["themes"].(map[string][]map[string]interface{})["preset"] = append(
+			configs["themes"].(map[string][]map[string]interface{})["preset"],
+			map[string]interface{}{"name": theme, "enhancements": true},
+		)
+	}
+
+	configsStr, _ := json.MarshalIndent(configs, "", "  ")
+	plugins = append(plugins, fmt.Sprintf("templwind(%s)", string(configsStr)))
+
+	tailwindConfig := fmt.Sprintf(`%s
+%s
+module.exports = {
+	darkMode: 'class',
+	content: ['./src/**/*.{html,js,ts}', require('path').join(require.resolve('@templwind/tw-plugin'), '../**/*.{html,js,ts}')],
+	theme: {
+		extend: {},
+	},
+	plugins: [%s],
+}`, strings.Join(pluginImports, ";\n"), strings.Join(plugins, ",\n"))
+
+	os.WriteFile(filepath.Join(opts.Path, "tailwind.config.js"), []byte(tailwindConfig), 0644)
+}
+
+func createPostCssConfig(opts *TemplwindOptions) {
+	postCssConfig := `module.exports = {
+	plugins: {
+		tailwindcss: {},
+		autoprefixer: {},
+	},
+}`
+	os.WriteFile(filepath.Join(opts.Path, "postcss.config.js"), []byte(postCssConfig), 0644)
+}
+
+func copyTemplate(opts *TemplwindOptions) {
+	meta := opts.Meta
+	if meta == nil {
+		metaPath := filepath.Join(opts.TemplwindTemplateDir, opts.TemplwindTemplate, "csa-meta.json")
+		metaData, err := os.ReadFile(metaPath)
+		if err == nil {
+			json.Unmarshal(metaData, &meta)
+		}
+	}
+
+	if meta != nil {
+		for _, folder := range meta["foldersToCopy"].([]interface{}) {
+			src := filepath.Join(opts.TemplwindTemplateDir, folder.(string))
+			dst := filepath.Join(opts.Path, folder.(string))
+			copyDir(src, dst)
+		}
+	}
+
+	fontFamily := ""
+	fontFile := ""
+	addedFontConfig := ""
+
+	for _, theme := range opts.TemplwindTheme {
+		switch theme {
+		case "gold-nouveau", "modern", "seasonal":
+			fontFamily = "Quicksand"
+			fontFile = "Quicksand.ttf"
+		case "rocket":
+			fontFamily = "Space Grotesk"
+			fontFile = "SpaceGrotesk.ttf"
+		case "seafoam":
+			fontFamily = "Playfair Display"
+			fontFile = "PlayfairDisplay-Italic.ttf"
+		case "vintage":
+			fontFamily = "Abril Fatface"
+			fontFile = "AbrilFatface.ttf"
+		default:
+			fontFamily = ""
+			fontFile = ""
+		}
+
+		if fontFamily != "" {
+			addedFontConfig += fmt.Sprintf(`
+/* %s theme */
+@font-face {
+	font-family: '%s';
+	src: url('/fonts/%s');
+	font-display: swap;
+}`, theme, fontFamily, fontFile)
+			src := filepath.Join(opts.TemplwindTemplateDir, "fonts", fontFile)
+			dst := filepath.Join(opts.Path, "static", "fonts", fontFile)
+			os.MkdirAll(filepath.Dir(dst), os.ModePerm)
+			copyFile(src, dst)
+		}
+	}
+
+	if addedFontConfig != "" {
+		layoutFile := filepath.Join(opts.Path, "src", "app.postcss")
+		appendToFile(layoutFile, addedFontConfig)
+	}
+
+	updateDataThemeAttribute(opts)
+}
+
+func updateDataThemeAttribute(opts *TemplwindOptions) {
+	appHTML := filepath.Join(opts.Path, "src", "app.html")
+	content, err := os.ReadFile(appHTML)
+	if err != nil {
+		log.Fatalf("Error reading app.html: %v", err)
+	}
+
+	dataTheme := "skeleton"
+	if len(opts.TemplwindTheme) > 0 {
+		dataTheme = opts.TemplwindTheme[0]
+	}
+
+	updatedContent := string(content)
+	updatedContent = regexp.MustCompile(`data-theme=".*"`).ReplaceAllString(updatedContent, fmt.Sprintf(`data-theme="%s"`, dataTheme))
+	os.WriteFile(appHTML, []byte(updatedContent), 0644)
+}
+
+func checkIfDirSafeToInstall(path string) error {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil
+	}
+
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+
+	if len(entries) > 0 {
+		return errors.New("directory contains files that could conflict")
+	}
+
+	return nil
+}
+
+func setNestedValue(obj map[string]interface{}, path []string, value string) {
+	current := obj
+	for i := 0; i < len(path)-1; i++ {
+		if _, exists := current[path[i]]; !exists {
+			current[path[i]] = make(map[string]interface{})
+		}
+		current = current[path[i]].(map[string]interface{})
+	}
+	current[path[len(path)-1]] = value
+}
+
+func createVSCodeSettings() error {
+	settingsPath := filepath.Join(".vscode", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), os.ModePerm); err != nil {
+		return err
+	}
+
+	resp, err := http.Get("https://raw.githubusercontent.com/skeletonlabs/skeleton/master/packages/skeleton/scripts/tw-settings.json")
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	settings, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(settingsPath, settings, 0644)
+}
+
+func copyDir(src string, dst string) error {
+	var err error
+	var fds []os.DirEntry
+	var srcinfo os.FileInfo
+
+	if srcinfo, err = os.Stat(src); err != nil {
+		return err
+	}
+
+	if err = os.MkdirAll(dst, srcinfo.Mode()); err != nil {
+		return err
+	}
+
+	if fds, err = os.ReadDir(src); err != nil {
+		return err
+	}
+	for _, fd := range fds {
+		srcfp := filepath.Join(src, fd.Name())
+		dstfp := filepath.Join(dst, fd.Name())
+
+		if fd.IsDir() {
+			if err = copyDir(srcfp, dstfp); err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			if err = copyFile(srcfp, dstfp); err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+	return nil
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
+}
+
+func appendToFile(filename string, content string) error {
+	f, err := os.OpenFile(filename, os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.WriteString(content)
+	return err
+}
