@@ -1,0 +1,39 @@
+package card
+
+import (
+	"github.com/templwind/templwind/components/indicator"
+)
+
+templ tpl(props *Props) {
+	<div class="p-4">
+		if props.HeadIndicator != nil {
+			<div class="grid grid-cols-3 gap-4">
+				<h5 class="col-span-2 mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{ props.Title }</h5>
+				<div class="col-span-1 text-right">
+					if props.HeadIndicator != nil {
+						@indicator.NewWithProps(props.HeadIndicator)
+					}
+				</div>
+			</div>
+		} else {
+			if props.Title != "" {
+				<h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{ props.Title }</h5>
+			}
+		}
+		if props.SubTitle != "" {
+			<h6 class="mb-2 text-xs uppercase font-semibold tracking-tight text-gray-500 dark:text-gray-100">{ props.SubTitle }</h6>
+		}
+		if props.Lead != "" {
+			<p class="text-sm text-gray-700 dark:text-gray-400">{ props.Lead }</p>
+		}
+		{ children... }
+	</div>
+	if len(props.Components) > 0 {
+		for _, c := range props.Components {
+			@c
+		}
+	}
+	if props.Buttons != nil {
+		@props.Buttons
+	}
+}
