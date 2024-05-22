@@ -11,6 +11,7 @@ import (
 type Props struct {
 	ID        string
 	StartDate string
+	Label     string
 }
 
 // New creates a new component
@@ -43,5 +44,11 @@ func WithID(id string) templwind.OptFunc[Props] {
 func WithStartDate(startDate time.Time) templwind.OptFunc[Props] {
 	return func(p *Props) {
 		p.StartDate = startDate.Format("2006-01-02")
+	}
+}
+
+func WithLabel(label string) templwind.OptFunc[Props] {
+	return func(p *Props) {
+		p.Label = label
 	}
 }
