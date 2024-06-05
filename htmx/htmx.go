@@ -16,11 +16,16 @@ func IsHtmxBoosted(r *http.Request) bool {
 }
 
 func Redirect(w http.ResponseWriter, r *http.Request, path string) error {
+	if path == "" {
+		return fmt.Errorf("path cannot be empty")
+	}
+
 	if IsHtmxRequest(r) {
 		w.Header().Set("HX-Redirect", path)
 		w.WriteHeader(http.StatusNoContent)
 		return nil
 	}
+
 	http.Redirect(w, r, path, http.StatusFound)
 	return nil
 }
