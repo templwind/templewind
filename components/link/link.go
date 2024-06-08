@@ -35,7 +35,7 @@ func NewWithProps(props *Props) templ.Component {
 	return templwind.NewWithProps(tpl, props)
 }
 
-// WithProps builds the propions for the component
+// WithProps builds the props for the component
 func WithProps(props ...templwind.OptFunc[Props]) *Props {
 	return templwind.WithProps(defaultProps, props...)
 }

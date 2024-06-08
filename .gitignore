@@ -23,3 +23,10 @@ go.work
 node_modules/
 tpl/
 style/
+
+# let the client build them
+*_templ.go
+
+tools/twctl/templates/starter
+
+themes/

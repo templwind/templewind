@@ -22,12 +22,12 @@ func NewWithProps(props *Props) templ.Component {
 	return templwind.NewWithProps(tpl, props)
 }
 
-// WithProps builds the propions with the given prop
+// WithProps builds the props with the given prop
 func WithProps(props ...templwind.OptFunc[Props]) *Props {
 	return templwind.WithProps(defaultProps, props...)
 }
 
-// DefaultProps provides the default propions for the AppBar component
+// DefaultProps provides the default props for the AppBar component
 func defaultProps() *Props {
 	return &Props{
 		ID:      "sidenav",
