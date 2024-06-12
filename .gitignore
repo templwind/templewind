@@ -25,8 +25,8 @@ tpl/
 style/
 
 # let the client build them
-*_templ.go
-*_templ.txt
+# *_templ.go
+# *_templ.txt
 
 tools/twctl/templates/starter
 
