@@ -92,8 +92,15 @@ func processComponent(fs afero.Fs, component, projectNamespace, framework, desti
 			continue
 		}
 
-		// Parse the Go file for additional dependencies
+		// Parse and rewrite import paths
 		if filepath.Ext(file) == ".go" {
+			err := rewriteImports(filepath.Join(componentDest, file), projectNamespace)
+			if err != nil {
+				fmt.Printf("Error rewriting imports for file %s: %v\n", file, err)
+				continue
+			}
+
+			// Parse the Go file for additional dependencies
 			imports, err := ParseGoFile(filepath.Join(componentDest, file))
 			if err != nil {
 				fmt.Printf("Error parsing file %s: %v\n", file, err)
@@ -103,6 +110,8 @@ func processComponent(fs afero.Fs, component, projectNamespace, framework, desti
 			for _, imp := range imports {
 				if strings.HasPrefix(imp, "github.com/templwind/templwind/components/") {
 					subComponent := strings.TrimPrefix(imp, "github.com/templwind/templwind/components/")
+					fmt.Println("Found sub-component:", subComponent)
+
 					if err := processComponent(fs, subComponent, projectNamespace, framework, destination, processedComponents); err != nil {
 						fmt.Printf("Error processing sub-component %s: %v\n", subComponent, err)
 						continue
@@ -110,6 +119,38 @@ func processComponent(fs afero.Fs, component, projectNamespace, framework, desti
 				}
 			}
 		}
+	}
+
+	return nil
+}
+
+func rewriteImports(filePath, projectNamespace string) error {
+	// Read the file content
+	fileContent, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("could not read file: %w", err)
+	}
+
+	// Parse the file to get the imports
+	fset := token.NewFileSet()
+	node, err := parser.ParseFile(fset, filePath, fileContent, parser.ImportsOnly)
+	if err != nil {
+		return fmt.Errorf("could not parse file: %w", err)
+	}
+
+	// Rewrite import paths
+	for _, imp := range node.Imports {
+		importPath := strings.Trim(imp.Path.Value, "\"")
+		if strings.HasPrefix(importPath, "github.com/templwind/templwind/components/") {
+			newImportPath := fmt.Sprintf("%s/%s", projectNamespace, strings.TrimPrefix(importPath, "github.com/templwind/templwind/"))
+			fileContent = []byte(strings.ReplaceAll(string(fileContent), importPath, newImportPath))
+		}
+	}
+
+	// Write the updated content back to the file
+	err = os.WriteFile(filePath, fileContent, 0644)
+	if err != nil {
+		return fmt.Errorf("could not write file: %w", err)
 	}
 
 	return nil

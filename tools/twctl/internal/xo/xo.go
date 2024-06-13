@@ -1,35 +1,57 @@
 package xo
 
 import (
-	"bufio"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"html/template"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
+	"text/template"
 	"unicode"
 
-	"github.com/tal-tech/go-zero/core/stores/builder"
-	"github.com/tal-tech/go-zero/core/stringx"
+	"github.com/templwind/templwind/tools/twctl/internal/utils"
+
+	"github.com/zeromicro/go-zero/core/stores/builder"
+	"github.com/zeromicro/go-zero/core/stringx"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
-const duplicateFunctionMarker = "Xo"
+func ProcessFiles(inputPath, outputPath string, ignoredTypes map[string]bool, baseImportPath string) error {
+	// Initialize the process with the provided options
+	process := New(
+		WithInputPath(inputPath),
+		WithOutputPath(outputPath),
+		WithIgnoredTypes(ignoredTypes),
+		WithBaseImportPath(baseImportPath),
+	)
 
-func ProcessFiles(inputPath, outputPath string, ignoreTypes map[string]bool, baseImportPath string) error {
-	// Generate static files
-	err := generateStaticFiles(inputPath, outputPath, baseImportPath)
+	// Resolve the absolute paths of input and output directories
+	absInputPath, err := filepath.Abs(inputPath)
+	if err != nil {
+		return fmt.Errorf("error resolving absolute path of input directory: %v", err)
+	}
+
+	absOutputPath, err := filepath.Abs(outputPath)
+	if err != nil {
+		return fmt.Errorf("error resolving absolute path of output directory: %v", err)
+	}
+
+	// Find the go.mod file for the source file
+	goModPath, _ := utils.FindGoModPath(filepath.Dir(absInputPath))
+	// Extract module name from go.mod
+	moduleName, _ := utils.GetModuleName(goModPath)
+
+	err = process.generateStaticFiles(moduleName, absOutputPath)
 	if err != nil {
 		return fmt.Errorf("error generating static files: %v", err)
 	}
 
-	// Walk through the directory to process .xo.go files
-	err = filepath.Walk(inputPath, func(path string, info os.FileInfo, err error) error {
+	fmt.Println("Parsing .xo.go files in:", absInputPath)
+	err = filepath.Walk(absInputPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -38,7 +60,7 @@ func ProcessFiles(inputPath, outputPath string, ignoreTypes map[string]bool, bas
 				fmt.Println("Not attempting to parse sf file:", path)
 				return nil
 			}
-			err := processXoFile(path, outputPath, ignoreTypes, baseImportPath)
+			err := process.ProcessXoFile(path)
 			if err != nil {
 				fmt.Println("Error parsing file:", path)
 				return err
@@ -53,9 +75,8 @@ func ProcessFiles(inputPath, outputPath string, ignoreTypes map[string]bool, bas
 	return nil
 }
 
-// Add your existing logic for processXoFile, generateStaticFiles, and other related functions here.
+func (p *Process) ProcessXoFile(filename string) error {
 
-func processXoFile(filename string, outputPath string, ignoredTypes map[string]bool) error {
 	fset := token.NewFileSet()
 	node, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 	if err != nil {
@@ -63,14 +84,14 @@ func processXoFile(filename string, outputPath string, ignoredTypes map[string]b
 	}
 
 	// Skip processing if the file contains an enum declaration
-	if containsEnumDeclaration(node) {
+	if p.containsEnumDeclaration(node) {
 		fmt.Printf("Skipping file %s as it contains enum declaration\n", filename)
 		return nil
 
 	}
 
 	// Skip processing if the file contains an ignored type.
-	if containsIgnoredType(node, ignoredTypes) {
+	if p.containsIgnoredType(node, p.IgnoredTypes) {
 		fmt.Printf("Skipping file %s as it contains ignored types\n", filename)
 		return nil
 	}
@@ -92,7 +113,7 @@ func processXoFile(filename string, outputPath string, ignoredTypes map[string]b
 		// Check for duplicate function names
 		if _, exists := functionNameMap[fn.Name.Name]; exists {
 			// rename the function name
-			fn.Name.Name = fn.Name.Name + duplicateFunctionMarker
+			fn.Name.Name = fn.Name.Name + p.DuplicateFunctionMarker
 		}
 
 		// Add the function name to the map
@@ -127,22 +148,22 @@ func processXoFile(filename string, outputPath string, ignoredTypes map[string]b
 
 	// Use the filename or struct name to generate modelName
 	// Get the struct name from the AST
-	modelName, err := getStructNameFromAstFile(node)
+	modelName, err := p.getStructNameFromAstFile(node)
 	if err != nil {
 		return err
 	}
-	fieldNames, rows, rowsExpectAutoSet, rowsWithPlaceHolder, rowsWithNamedPlaceHolder := extractFieldData(node)
+	fieldNames, rows, rowsExpectAutoSet, rowsWithPlaceHolder, rowsWithNamedPlaceHolder := p.extractFieldData(node)
 
-	inputPackageName := getLastPathComponent(inputPath)
+	inputPackageName := p.getLastPathComponent(p.InputPath)
 
 	// Find the go.mod file for the source file
-	goModPath, err := findGoModPath(filepath.Dir(filename))
+	goModPath, err := utils.FindGoModPath(filepath.Dir(filename))
 	if err != nil {
 		return fmt.Errorf("error finding go.mod: %v", err)
 	}
 
 	// Extract module name from go.mod
-	moduleName, err := getModuleName(goModPath)
+	moduleName, err := utils.GetModuleName(goModPath)
 	if err != nil {
 		return fmt.Errorf("error getting module name from go.mod: %v", err)
 	}
@@ -164,11 +185,74 @@ func processXoFile(filename string, outputPath string, ignoredTypes map[string]b
 	}
 
 	// fmt.Println("Full Package Name: ", fullPackageName)
+	return p.generateModelCode(
+		NewModelCodeOptions(
+			WithModelName(modelName),
+			WithFullPackageName(fullPackageName),
+			WithNode(node),
+			WithFunctions(functions),
+			WithFunctionSignatures(functionSignatures),
+			WithOriginalPackageName(inputPackageName),
+			WithFieldNames(fieldNames),
+			WithRows(rows),
+			WithRowsExpectAutoSet(rowsExpectAutoSet),
+			WithRowsWithPlaceHolder(rowsWithPlaceHolder),
+			WithTableName(tableName),
+			WithRowsWithNamedPlaceHolder(rowsWithNamedPlaceHolder),
+		),
+	)
 
-	return generateModelCode(modelName, fullPackageName, node, functions, functionSignatures, inputPackageName, fieldNames, rows, rowsExpectAutoSet, rowsWithPlaceHolder, rowsWithNamedPlaceHolder, outputPath, tableName)
+	// return generateModelCode(
+	// 	modelName,
+	// 	fullPackageName,
+	// 	node,
+	// 	functions,
+	// 	functionSignatures,
+	// 	inputPackageName,
+	// 	fieldNames,
+	// 	rows,
+	// 	rowsExpectAutoSet,
+	// 	rowsWithPlaceHolder,
+	// 	rowsWithNamedPlaceHolder,
+	// 	tableName,
+	// )
 }
 
-func getLastPathComponent(path string) string {
+// Check if the file contains an enum declaration.
+func (p *Process) containsEnumDeclaration(node *ast.File) bool {
+	for _, f := range node.Decls {
+		genDecl, ok := f.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		if genDecl.Tok == token.CONST {
+			return true
+		}
+	}
+	return false
+}
+
+// Check if a file contains any ignored types.
+func (p *Process) containsIgnoredType(node *ast.File, ignoredTypes map[string]bool) bool {
+	for _, f := range node.Decls {
+		genDecl, ok := f.(*ast.GenDecl)
+		if !ok {
+			continue
+		}
+		for _, spec := range genDecl.Specs {
+			typeSpec, ok := spec.(*ast.TypeSpec)
+			if !ok {
+				continue
+			}
+			if _, ok := ignoredTypes[typeSpec.Name.Name]; ok {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (p *Process) getLastPathComponent(path string) string {
 	parts := strings.Split(filepath.Clean(path), string(os.PathSeparator))
 	if len(parts) > 0 {
 		return parts[len(parts)-1]
@@ -176,7 +260,7 @@ func getLastPathComponent(path string) string {
 	return ""
 }
 
-func getStructNameFromAstFile(node *ast.File) (string, error) {
+func (p *Process) getStructNameFromAstFile(node *ast.File) (string, error) {
 	// Loop through the declarations to find the struct
 	for _, f := range node.Decls {
 		if genDecl, ok := f.(*ast.GenDecl); ok {
@@ -193,22 +277,22 @@ func getStructNameFromAstFile(node *ast.File) (string, error) {
 	return "", fmt.Errorf("no struct found in file")
 }
 
-func exprToString(expr ast.Expr) string {
+func (p *Process) exprToString(expr ast.Expr) string {
 	switch e := expr.(type) {
 	case *ast.Ident:
 		return e.Name
 	case *ast.SelectorExpr:
-		return exprToString(e.X) + "." + e.Sel.Name
+		return p.exprToString(e.X) + "." + e.Sel.Name
 	case *ast.StarExpr:
-		return "*" + exprToString(e.X)
+		return "*" + p.exprToString(e.X)
 	case *ast.ArrayType:
-		return "[]" + exprToString(e.Elt)
+		return "[]" + p.exprToString(e.Elt)
 	default:
 		return ""
 	}
 }
 
-func extractFieldData(file *ast.File) ([]string, string, string, string, string) {
+func (p *Process) extractFieldData(file *ast.File) ([]string, string, string, string, string) {
 	var fieldNames []string
 
 	// Loop through the declarations in the file
@@ -266,10 +350,10 @@ type FunctionInfo struct {
 }
 
 // Create a function to generate the function return types map
-func makeFunctionReturnTypesMap(functions []FunctionInfo) map[string]string {
+func (p *Process) makeFunctionReturnTypesMap(functions []FunctionInfo) map[string]string {
 	functionReturnTypes := make(map[string]string)
 	for _, fn := range functions {
-		functionReturnTypes[fn.Decl.Name.Name] = getFunctionReturnType(fn.Decl, "")
+		functionReturnTypes[fn.Decl.Name.Name] = p.getFunctionReturnType(fn.Decl, "")
 	}
 	return functionReturnTypes
 }
@@ -294,7 +378,7 @@ type defaultInterfaceTemplateData struct {
 	BaseImportPath           string
 }
 
-func generateStaticFiles(packageName, outputPath string) error {
+func (p *Process) generateStaticFiles(packageName, outputPath string) error {
 	// Extract the package name from the output path
 	outputPathBase := filepath.Base(outputPath)
 	includePackageName := cases.Lower(language.English).String(outputPathBase) // Ensure the package name is in lowercase
@@ -310,23 +394,23 @@ func generateStaticFiles(packageName, outputPath string) error {
 		// FullPackageName:          fullPackageName,
 		// OriginalPackageName:      originalPackageName,
 		IncludePackageName: includePackageName,
-		BaseImportPath:     baseImportPath,
+		BaseImportPath:     p.BaseImportPath,
 	}
 
 	funcMap := template.FuncMap{
-		"GetFunctionParams":             getFunctionParams,
-		"GetFunctionCleanParams":        getFunctionCleanParams,
-		"RemoveDuplicateFunctionMarker": removeDuplicateFunctionMarker,
-		"GetFunctionReturnType":         getFunctionReturnType,
-		"FirstToLower":                  firstToLower,
-		"FormatTableName":               formatTableName,
-		"FormatFieldNames":              formatFieldNames,
-		"WrapInBackticks":               wrapInBackticks,
-		"InsertBacktick":                insertBacktick,
-		"RawTableName":                  rawTableName,
+		"GetFunctionParams":             p.getFunctionParams,
+		"GetFunctionCleanParams":        p.getFunctionCleanParams,
+		"RemoveDuplicateFunctionMarker": p.removeDuplicateFunctionMarker,
+		"GetFunctionReturnType":         p.getFunctionReturnType,
+		"FirstToLower":                  utils.FirstToLower,
+		"FormatTableName":               p.formatTableName,
+		"FormatFieldNames":              p.formatFieldNames,
+		"WrapInBackticks":               p.wrapInBackticks,
+		"InsertBacktick":                p.insertBacktick,
+		"RawTableName":                  p.rawTableName,
 	}
 
-	filePath := filepath.Join(inputPath, "transactions.ext.go")
+	filePath := filepath.Join(p.InputPath, "transactions.ext.go")
 	file, err := os.Create(filePath)
 	if err != nil {
 		return fmt.Errorf("failed to create transaction file: %v", err)
@@ -334,7 +418,7 @@ func generateStaticFiles(packageName, outputPath string) error {
 	defer file.Close()
 
 	// Parse the template
-	tmpl, err := template.New("transaction").Funcs(funcMap).Parse(templates.TransactionTemplate)
+	tmpl, err := template.New("transaction").Funcs(funcMap).ParseFiles("templates/xo/transaction.tpl")
 	if err != nil {
 		return fmt.Errorf("failed to parse template for extension: %v", err)
 	}
@@ -346,60 +430,63 @@ func generateStaticFiles(packageName, outputPath string) error {
 	return nil
 }
 
-func generateModelCode(modelName, fullPackageName string, node *ast.File, functions []FunctionInfo, functionSignatures []string, originalPackageName string, fieldNames []string, rows, rowsExpectAutoSet, rowsWithPlaceHolder, rowsWithNamedPlaceHolder, outputPath, tableName string) error {
+func (p *Process) generateModelCode(opts *ModelCodeOptions) error {
+
+	// modelName, fullPackageName string, node *ast.File, functions []FunctionInfo, functionSignatures []string, originalPackageName string, fieldNames []string, rows, rowsExpectAutoSet, rowsWithPlaceHolder, rowsWithNamedPlaceHolder, p.OutputPath, tableName string
+
 	// Extract the package name from the output path
-	outputPathBase := filepath.Base(outputPath)
+	outputPathBase := filepath.Base(p.OutputPath)
 	includePackageName := cases.Lower(language.English).String(outputPathBase) // Ensure the package name is in lowercase
 
 	// Ensure the output directory exists
-	err := os.MkdirAll(outputPath, os.ModePerm)
+	err := os.MkdirAll(p.OutputPath, os.ModePerm)
 	if err != nil {
 		return fmt.Errorf("failed to create output directory: %v", err)
 	}
 
 	// Check for SQL null types in the AST node
-	usesSqlNull := containsSqlNullTypes(node)
-	usesResourcesTypes := containsResourcesTypes(node)
+	usesSqlNull := p.containsSqlNullTypes(opts.Node)
+	usesResourcesTypes := p.containsResourcesTypes(opts.Node)
 
 	// Create the data for the template
 	data := defaultInterfaceTemplateData{
-		FullPackageName:          fullPackageName,
-		OriginalPackageName:      originalPackageName,
+		FullPackageName:          opts.FullPackageName,
+		OriginalPackageName:      opts.OriginalPackageName,
 		IncludePackageName:       includePackageName,
 		UsesSqlNull:              usesSqlNull,
 		UsesResourcesTypes:       usesResourcesTypes,
-		ModelName:                modelName,
-		FunctionSignatures:       functionSignatures,
-		Functions:                functions,
-		FieldNames:               fieldNames,
-		Rows:                     rows,
-		RowsExpectAutoSet:        rowsExpectAutoSet,
-		RowsWithPlaceHolder:      rowsWithPlaceHolder,
-		RowsWithNamedPlaceHolder: rowsWithNamedPlaceHolder,
-		FunctionReturnTypes:      makeFunctionReturnTypesMap(functions),
-		TableName:                tableName,
-		BaseImportPath:           baseImportPath,
+		ModelName:                opts.ModelName,
+		FunctionSignatures:       opts.FunctionSignatures,
+		Functions:                opts.Functions,
+		FieldNames:               opts.FieldNames,
+		Rows:                     opts.Rows,
+		RowsExpectAutoSet:        opts.RowsExpectAutoSet,
+		RowsWithPlaceHolder:      opts.RowsWithPlaceHolder,
+		RowsWithNamedPlaceHolder: opts.RowsWithNamedPlaceHolder,
+		FunctionReturnTypes:      p.makeFunctionReturnTypesMap(opts.Functions),
+		TableName:                opts.TableName,
+		BaseImportPath:           p.BaseImportPath,
 	}
 
 	funcMap := template.FuncMap{
-		"GetFunctionParams":             getFunctionParams,
-		"GetFunctionCleanParams":        getFunctionCleanParams,
-		"RemoveDuplicateFunctionMarker": removeDuplicateFunctionMarker,
-		"GetFunctionReturnType":         getFunctionReturnType,
-		"FirstToLower":                  firstToLower,
-		"FormatTableName":               formatTableName,
-		"FormatFieldNames":              formatFieldNames,
-		"WrapInBackticks":               wrapInBackticks,
-		"InsertBacktick":                insertBacktick,
-		"RawTableName":                  rawTableName,
+		"GetFunctionParams":             p.getFunctionParams,
+		"GetFunctionCleanParams":        p.getFunctionCleanParams,
+		"RemoveDuplicateFunctionMarker": p.removeDuplicateFunctionMarker,
+		"GetFunctionReturnType":         p.getFunctionReturnType,
+		"FirstToLower":                  utils.FirstToLower,
+		"FormatTableName":               p.formatTableName,
+		"FormatFieldNames":              p.formatFieldNames,
+		"WrapInBackticks":               p.wrapInBackticks,
+		"InsertBacktick":                p.insertBacktick,
+		"RawTableName":                  p.rawTableName,
 	}
 
-	fmt.Println("Generating model code for:", modelName)
+	fmt.Println("Generating model code for:", opts.ModelName)
 	{
 
-		if xoOnly {
+		if p.XoOnly {
 
-			extensionFilePath := filepath.Join(inputPath, fmt.Sprintf("%s.ext.go", strings.ToLower(modelName)))
+			extensionFilePath := filepath.Join(p.InputPath, fmt.Sprintf("%s.ext.go", strings.ToLower(opts.ModelName)))
 			extensionFile, err := os.Create(extensionFilePath)
 			if err != nil {
 				return fmt.Errorf("failed to create extension file: %v", err)
@@ -407,7 +494,7 @@ func generateModelCode(modelName, fullPackageName string, node *ast.File, functi
 			defer extensionFile.Close()
 
 			// Parse the template
-			extTmpl, err := template.New("model").Funcs(funcMap).Parse(templates.XoExtensionTemplate)
+			extTmpl, err := template.New("model").Funcs(funcMap).ParseFiles("templates/xo/xo_extension.tpl")
 			if err != nil {
 				return fmt.Errorf("failed to parse template for extension: %v", err)
 			}
@@ -420,7 +507,7 @@ func generateModelCode(modelName, fullPackageName string, node *ast.File, functi
 		}
 
 		// Create the output file
-		outputFilePath := filepath.Join(outputPath, fmt.Sprintf("%s_model.gen.go", toSnakeCase(modelName)))
+		outputFilePath := filepath.Join(p.OutputPath, fmt.Sprintf("%s_model.gen.go", utils.ToSnake(opts.ModelName)))
 		outputFile, err := os.Create(outputFilePath)
 		if err != nil {
 			return fmt.Errorf("failed to create output file: %v", err)
@@ -428,7 +515,7 @@ func generateModelCode(modelName, fullPackageName string, node *ast.File, functi
 		defer outputFile.Close()
 
 		// Parse the template
-		tmpl, err := template.New("model").Funcs(funcMap).Parse(templates.DefaultInterfaceTemplate)
+		tmpl, err := template.New("model").Funcs(funcMap).ParseFiles("templates/xo/default_interface.tpl")
 		if err != nil {
 			return fmt.Errorf("failed to parse template: %v", err)
 		}
@@ -445,7 +532,7 @@ func generateModelCode(modelName, fullPackageName string, node *ast.File, functi
 	// Generate custom interface template here
 	{
 		// Create the output file
-		outputFilePath := filepath.Join(outputPath, fmt.Sprintf("%s_model.go", toSnakeCase(modelName)))
+		outputFilePath := filepath.Join(p.OutputPath, fmt.Sprintf("%s_model.go", utils.ToSnake(opts.ModelName)))
 		// if the outputFilePath already exists then skip
 		if _, err := os.Stat(outputFilePath); !os.IsNotExist(err) {
 			fmt.Printf("Skipping generation of custom model code at %s\n", outputFilePath)
@@ -459,7 +546,7 @@ func generateModelCode(modelName, fullPackageName string, node *ast.File, functi
 		defer outputFile.Close()
 
 		// Parse the template
-		tmpl, err := template.New("model").Funcs(funcMap).Parse(templates.CustomInterfaceTemplate)
+		tmpl, err := template.New("model").Funcs(funcMap).ParseFiles("templates/xo/custom_interface.tpl")
 		if err != nil {
 			return fmt.Errorf("failed to parse template: %v", err)
 		}
@@ -474,90 +561,17 @@ func generateModelCode(modelName, fullPackageName string, node *ast.File, functi
 	return nil
 }
 
-// toSnakeCase converts a PascalCase string to snake_case.
-func toSnakeCase(str string) string {
-	var result strings.Builder
-	for i, r := range str {
-		if i > 0 && unicode.IsUpper(r) && !unicode.IsUpper(rune(str[i-1])) && str[i-1] != '_' {
-			result.WriteRune('_')
-		}
-		result.WriteRune(unicode.ToLower(r))
-	}
-	return result.String()
-}
-
-func firstToLower(s string) string {
-	if len(s) == 0 {
-		return s
-	}
-
-	var i int
-	for i = 1; i < len(s); i++ {
-		if i+1 < len(s) && unicode.IsUpper(rune(s[i])) && unicode.IsLower(rune(s[i+1])) {
-			break
-		}
-	}
-
-	return strings.ToLower(s[:i]) + s[i:]
-}
-
-func findGoModPath(startDir string) (string, error) {
-	currentDir := startDir
-	for {
-		// Check if go.mod exists in the current directory
-		goModPath := filepath.Join(currentDir, "go.mod")
-		if _, err := os.Stat(goModPath); err == nil {
-			return goModPath, nil
-		} else if !os.IsNotExist(err) {
-			// An error other than "not exist"
-			return "", err
-		}
-
-		// Move to the parent directory
-		parentDir := filepath.Dir(currentDir)
-		if parentDir == currentDir {
-			// Root directory reached without finding go.mod
-			return "", os.ErrNotExist
-		}
-		currentDir = parentDir
-	}
-}
-
-func getModuleName(goModPath string) (string, error) {
-	file, err := os.Open(goModPath)
-	if err != nil {
-		return "", err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if strings.HasPrefix(line, "module") {
-			parts := strings.Fields(line)
-			if len(parts) >= 2 {
-				return parts[1], nil
-			}
-		}
-	}
-	if err := scanner.Err(); err != nil {
-		return "", err
-	}
-
-	return "", fmt.Errorf("module directive not found in %s", goModPath)
-}
-
-func getFunctionParams(fn *ast.FuncDecl, originalPkg string, isReceiver bool, modelName string) string {
+func (p *Process) getFunctionParams(fn *ast.FuncDecl, originalPkg string, isReceiver bool, modelName string) string {
 	params := make([]string, 0)
-	for _, p := range fn.Type.Params.List {
-		paramType := exprToStringWithPkg(p.Type, originalPkg)
+	for _, item := range fn.Type.Params.List {
+		paramType := p.exprToStringWithPkg(item.Type, originalPkg)
 
 		// Check if the parameter type is a pointer
-		if _, ok := p.Type.(*ast.StarExpr); ok {
+		if _, ok := item.Type.(*ast.StarExpr); ok {
 			paramType = "*" + paramType
 		}
 
-		for _, name := range p.Names {
+		for _, name := range item.Names {
 			if !strings.Contains(paramType, "DB") {
 				params = append(params, name.Name+" "+paramType)
 			}
@@ -572,18 +586,18 @@ func getFunctionParams(fn *ast.FuncDecl, originalPkg string, isReceiver bool, mo
 		}
 
 		// make the modelName have a lowercase first letter
-		modelName = firstToLower(modelName)
+		modelName = utils.FirstToLower(modelName)
 		params = append(params, fmt.Sprintf("%s *%s", modelName, receiverType))
 	}
 
 	return strings.Join(params, ", ")
 }
 
-func getFunctionCleanParams(fn *ast.FuncDecl, useAdapter bool) string {
+func (p *Process) getFunctionCleanParams(fn *ast.FuncDecl, useAdapter bool) string {
 	var params []string
-	for _, p := range fn.Type.Params.List {
-		for _, name := range p.Names {
-			paramType := exprToStringWithPkg(p.Type, "")
+	for _, item := range fn.Type.Params.List {
+		for _, name := range item.Names {
+			paramType := p.exprToStringWithPkg(item.Type, "")
 			if strings.Contains(paramType, "DB") {
 				if useAdapter {
 					params = append(params, "db")
@@ -598,11 +612,11 @@ func getFunctionCleanParams(fn *ast.FuncDecl, useAdapter bool) string {
 	return strings.Join(params, ", ")
 }
 
-func removeDuplicateFunctionMarker(fn *ast.FuncDecl) string {
-	return strings.ReplaceAll(fn.Name.Name, duplicateFunctionMarker, "")
+func (p *Process) removeDuplicateFunctionMarker(fn *ast.FuncDecl) string {
+	return strings.ReplaceAll(fn.Name.Name, p.DuplicateFunctionMarker, "")
 }
 
-func getFunctionReturnType(fn *ast.FuncDecl, originalPkg string) string {
+func (p *Process) getFunctionReturnType(fn *ast.FuncDecl, originalPkg string) string {
 	if fn.Type.Results == nil {
 		return ""
 	}
@@ -614,7 +628,7 @@ func getFunctionReturnType(fn *ast.FuncDecl, originalPkg string) string {
 
 	results := make([]string, 0)
 	for _, r := range fn.Type.Results.List {
-		resultType := exprToStringWithPkg(r.Type, packageName)
+		resultType := p.exprToStringWithPkg(r.Type, packageName)
 
 		// replace .. with .
 		resultType = strings.ReplaceAll(resultType, "..", ".")
@@ -636,12 +650,12 @@ func getFunctionReturnType(fn *ast.FuncDecl, originalPkg string) string {
 	}
 }
 
-func exprToStringWithPkg(expr ast.Expr, packageName string) string {
+func (p *Process) exprToStringWithPkg(expr ast.Expr, packageName string) string {
 	switch e := expr.(type) {
 	case *ast.Ident:
 		typeName := e.Name
 		// If it's a native Go type or an ignored type, return as is.
-		if isNativeType(typeName) || ignoreTypes[typeName] {
+		if p.isNativeType(typeName) || p.IgnoredTypes[typeName] {
 			return typeName
 		}
 		// Prepend the package name if it's a non-native type and the package name is provided.
@@ -651,13 +665,13 @@ func exprToStringWithPkg(expr ast.Expr, packageName string) string {
 		return typeName
 	case *ast.SelectorExpr:
 		// Handle selector expressions.
-		fullTypeName := exprToString(e.X) + "." + e.Sel.Name
-		if ignoreTypes[fullTypeName] {
+		fullTypeName := p.exprToString(e.X) + "." + e.Sel.Name
+		if p.IgnoredTypes[fullTypeName] {
 			return fullTypeName
 		}
 		// Check if it already represents a package name.
 		if xIdent, ok := e.X.(*ast.Ident); ok {
-			if isPackageName(xIdent.Name) {
+			if p.isPackageName(xIdent.Name) {
 				return fullTypeName
 			}
 		}
@@ -668,24 +682,24 @@ func exprToStringWithPkg(expr ast.Expr, packageName string) string {
 		return fullTypeName
 	case *ast.StarExpr:
 		// For pointer types, add '*' and process the element type.
-		return "*" + exprToStringWithPkg(e.X, packageName)
+		return "*" + p.exprToStringWithPkg(e.X, packageName)
 	case *ast.ArrayType:
 		// For array types, add '[]' and process the element type.
-		return "[]" + exprToStringWithPkg(e.Elt, packageName)
+		return "[]" + p.exprToStringWithPkg(e.Elt, packageName)
 	default:
 		return ""
 	}
 }
 
 // isPackageName checks if the provided name is a known package name
-func isPackageName(name string) bool {
+func (p *Process) isPackageName(name string) bool {
 	// Check if the name contains a dot, indicating it might be a package or type name from a package
 	if strings.Contains(name, ".") {
 		return true
 	}
 
 	// Check if the name is not a native type and if it begins with a lowercase letter
-	if !isNativeType(name) && unicode.IsLower(rune(name[0])) {
+	if !p.isNativeType(name) && unicode.IsLower(rune(name[0])) {
 		return true
 	}
 
@@ -693,7 +707,7 @@ func isPackageName(name string) bool {
 }
 
 // isNativeType checks if the provided type name is a native Go type
-func isNativeType(typeName string) bool {
+func (p *Process) isNativeType(typeName string) bool {
 	nativeTypes := map[string]bool{
 		"string": true, "int": true, "int8": true, "int16": true,
 		"int32": true, "int64": true, "uint": true, "uint8": true,
@@ -709,7 +723,7 @@ func isNativeType(typeName string) bool {
 	return exists
 }
 
-func containsSqlNullTypes(node *ast.File) bool {
+func (p *Process) containsSqlNullTypes(node *ast.File) bool {
 	// Named recursive function
 	var checkType func(ast.Expr) bool
 	checkType = func(expr ast.Expr) bool {
@@ -764,7 +778,7 @@ func containsSqlNullTypes(node *ast.File) bool {
 	return false
 }
 
-func containsResourcesTypes(node *ast.File) bool {
+func (p *Process) containsResourcesTypes(node *ast.File) bool {
 	// Named recursive function
 	var checkType func(ast.Expr) bool
 	checkType = func(expr ast.Expr) bool {
@@ -819,7 +833,7 @@ func containsResourcesTypes(node *ast.File) bool {
 	return false
 }
 
-func formatTableName(tableName string) string {
+func (p *Process) formatTableName(tableName string) string {
 	parts := strings.Split(tableName, ".")
 	// Check if the tableName is split into two parts (schema and table name)
 	if len(parts) == 2 {
@@ -830,7 +844,7 @@ func formatTableName(tableName string) string {
 	return tableName
 }
 
-func rawTableName(tableName string) string {
+func (p *Process) rawTableName(tableName string) string {
 	parts := strings.Split(tableName, ".")
 	// Check if the tableName is split into two parts (schema and table name)
 	if len(parts) == 2 {
@@ -841,7 +855,7 @@ func rawTableName(tableName string) string {
 	return tableName
 }
 
-func formatFieldNames(fieldNames []string) string {
+func (p *Process) formatFieldNames(fieldNames []string) string {
 
 	// format the fieldnemaes into an array of strings
 	var formattedFieldNames []string
@@ -853,10 +867,10 @@ func formatFieldNames(fieldNames []string) string {
 	return `[]string{` + strings.Join(formattedFieldNames, ",") + `}`
 }
 
-func wrapInBackticks(str string) string {
+func (p *Process) wrapInBackticks(str string) string {
 	return fmt.Sprintf("`%s`", str)
 }
 
-func insertBacktick() string {
+func (p *Process) insertBacktick() string {
 	return "`"
 }
