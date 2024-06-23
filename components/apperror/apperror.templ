@@ -3,7 +3,7 @@ package apperror
 import (
 	"strings"
 
-	"github.com/templwind/templwind/utils"
+	"github.com/templwind/templwind/util"
 )
 
 templ New(errors ...string) {
@@ -18,7 +18,7 @@ templ New(errors ...string) {
 				<ul class="mt-1.5 list-disc list-inside">
 					for _, err := range errors {
 						for _, item := range strings.Split(err, ";") {
-							<li>{ utils.CutStringFromMatch(item, ":") }</li>
+							<li>{ util.CutStringFromMatch(item, ":") }</li>
 						}
 					}
 				</ul>

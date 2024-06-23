@@ -7,7 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/templwind/templwind"
 	"github.com/templwind/templwind/components/link"
-	"github.com/templwind/templwind/utils"
+	"github.com/templwind/templwind/util"
 )
 
 type Props struct {
@@ -34,7 +34,7 @@ func WithProps(opts ...templwind.OptFunc[Props]) *Props {
 
 func defaultProps() *Props {
 	return &Props{
-		ID:           utils.ToCamel(fmt.Sprintf("appHeader-%s", uuid.New().String())),
+		ID:           util.ToCamel(fmt.Sprintf("appHeader-%s", uuid.New().String())),
 		HideOnMobile: false,
 		Title:        "App Header",
 	}

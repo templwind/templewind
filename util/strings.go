@@ -1,15 +1,17 @@
-package utils
+package util
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
 
-// CutStringFromMatch cuts the string from the first match of the pattern
 func CutStringFromMatch(input, pattern string) string {
+	fmt.Println(input)
 	parts := strings.Split(input, pattern)
 	if len(parts) < 2 {
 		return input
@@ -17,7 +19,7 @@ func CutStringFromMatch(input, pattern string) string {
 	return strings.TrimSpace(parts[1])
 }
 
-// ToCamel converts string to camelCase
+// toCamel converts string to camelCase
 func ToCamel(s string) string {
 	words := SplitIntoWords(s)
 	caser := cases.Title(language.English)
@@ -27,42 +29,70 @@ func ToCamel(s string) string {
 	return strings.Join(words, "")
 }
 
-// ToKebab converts string to kebab-case
+// toKebab converts string to kebab-case
 func ToKebab(s string) string {
 	return strings.Join(SplitIntoWords(s), "-")
 }
 
-// ToTitle converts string to Title Case
+// toTitle converts string to Title Case
 func ToTitle(s string) string {
 	words := SplitIntoWords(s)
-	caser := cases.Title(language.English)
 	for i := range words {
-		words[i] = caser.String(words[i])
+		if len(words[i]) > 0 {
+			runes := []rune(words[i])
+			runes[0] = unicode.ToUpper(runes[0])
+			words[i] = string(runes)
+		}
 	}
 	return strings.Join(words, " ")
 }
 
-// ToSnake converts string to snake_case
+// toSnake converts string to snake_case
 func ToSnake(s string) string {
 	return strings.Join(SplitIntoWords(s), "_")
 }
 
-// ToPascal converts string to PascalCase
+// toPascal converts string to PascalCase
 func ToPascal(s string) string {
 	words := SplitIntoWords(s)
-	caser := cases.Title(language.English)
 	for i := range words {
-		words[i] = caser.String(words[i])
+		words[i] = FirstToUpper(words[i])
 	}
 	return strings.Join(words, "")
 }
 
-// ToConstant converts string to CONSTANT_CASE
+// toConstant converts string to CONSTANT_CASE
 func ToConstant(s string) string {
 	return strings.ToUpper(strings.Join(SplitIntoWords(s), "_"))
 }
 
 // SplitIntoWords splits the string into words based on non-alphanumeric characters
 func SplitIntoWords(s string) []string {
-	return regexp.MustCompile("[^a-zA-Z0-9]+").Split(strings.ToLower(s), -1)
+	return regexp.MustCompile(`[^a-zA-Z0-9]+`).Split(s, -1)
+}
+
+func FirstToLower(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+
+	firstRune := []rune(s)[0]
+	if unicode.IsUpper(firstRune) {
+		firstRune = unicode.ToLower(firstRune)
+	}
+
+	return string(firstRune) + s[1:]
+}
+
+func FirstToUpper(s string) string {
+	if len(s) == 0 {
+		return s
+	}
+
+	firstRune := []rune(s)[0]
+	if unicode.IsLower(firstRune) {
+		firstRune = unicode.ToUpper(firstRune)
+	}
+
+	return string(firstRune) + s[1:]
 }

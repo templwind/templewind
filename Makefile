@@ -34,9 +34,9 @@ css:
 css-watch:
 	tailwindcss -c tailwind.config.js -i docs/assets/css/input.css -o docs/assets/css/output.css --watch
 
-## templ-generate: generate new template
-.PHONY: templ-generate
-templ-generate: 
+## templ: generate new template
+.PHONY: templ
+templ: 
 	templ generate
 
 ## templ-watch: watch templ files and format them

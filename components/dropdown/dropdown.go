@@ -6,7 +6,7 @@ import (
 	"github.com/a-h/templ"
 	"github.com/google/uuid"
 	"github.com/templwind/templwind"
-	"github.com/templwind/templwind/utils"
+	"github.com/templwind/templwind/util"
 )
 
 type Link struct {
@@ -38,7 +38,7 @@ func WithProps(props ...templwind.OptFunc[Props]) *Props {
 
 func defaultProps() *Props {
 	return &Props{
-		ID: utils.ToCamel(fmt.Sprintf("dropdown-%s", uuid.New().String())),
+		ID: util.ToCamel(fmt.Sprintf("dropdown-%s", uuid.New().String())),
 	}
 }
 

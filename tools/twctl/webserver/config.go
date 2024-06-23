@@ -1,6 +1,7 @@
 package webserver
 
+import "github.com/zeromicro/go-zero/rest"
+
 type WebServerConf struct {
-	Host string
-	Port int
+	rest.RestConf
 }

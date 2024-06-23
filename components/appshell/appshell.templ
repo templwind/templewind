@@ -1,7 +1,7 @@
 package appshell
 
 import (
-	"github.com/templwind/templwind/utils"
+	"github.com/templwind/templwind/util"
 )
 
 templ tpl(props *Props) {
@@ -13,7 +13,7 @@ templ tpl(props *Props) {
 		if props.Header != nil {
 			<header
 				id="shell-header"
-				class={ utils.MergeClasses("flex-none z-10", props.HeaderClasses) }
+				class={ util.MergeClasses("flex-none z-10", props.HeaderClasses) }
 			>
 				@props.Header
 			</header>
@@ -22,7 +22,7 @@ templ tpl(props *Props) {
 			if props.SidebarLeft != nil {
 				<aside
 					id="sidebar-left"
-					class={ utils.MergeClasses("flex-none overflow-x-hidden overflow-y-auto w-auto", props.SidebarLeftClasses) }
+					class={ util.MergeClasses("flex-none overflow-x-hidden overflow-y-auto w-auto", props.SidebarLeftClasses) }
 				>
 					@props.SidebarLeft
 				</aside>
@@ -31,7 +31,7 @@ templ tpl(props *Props) {
 				if props.PageHeader != nil {
 					<header
 						id="page-header"
-						class={ utils.MergeClasses("flex-none", props.PageHeaderClasses) }
+						class={ util.MergeClasses("flex-none", props.PageHeaderClasses) }
 					>
 						@props.PageHeader
 					</header>
@@ -42,7 +42,7 @@ templ tpl(props *Props) {
 				if props.PageFooter != nil {
 					<footer
 						id="page-footer"
-						class={ utils.MergeClasses("flex-none", props.PageFooterClasses) }
+						class={ util.MergeClasses("flex-none", props.PageFooterClasses) }
 					>
 						@props.PageFooter
 					</footer>
@@ -51,7 +51,7 @@ templ tpl(props *Props) {
 			if props.SidebarRight != nil {
 				<aside
 					id="sidebar-right"
-					class={ utils.MergeClasses("flex-none overflow-x-hidden overflow-y-auto w-auto", props.SidebarRightClasses) }
+					class={ util.MergeClasses("flex-none overflow-x-hidden overflow-y-auto w-auto", props.SidebarRightClasses) }
 				>
 					@props.SidebarRight
 				</aside>
@@ -60,7 +60,7 @@ templ tpl(props *Props) {
 		if props.Footer != nil {
 			<footer
 				id="shell-footer"
-				class={ utils.MergeClasses("flex-none", props.FooterClasses) }
+				class={ util.MergeClasses("flex-none", props.FooterClasses) }
 			>
 				@props.Footer
 			</footer>
