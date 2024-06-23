@@ -11,7 +11,6 @@ import (
 
 	"github.com/zeromicro/go-zero/tools/goctl/config"
 	"github.com/zeromicro/go-zero/tools/goctl/util/format"
-	"github.com/zeromicro/go-zero/tools/goctl/vars"
 	// "saas-gen/config"
 	// "saas-gen/format"
 	// "saas-gen/spec"
@@ -52,7 +51,8 @@ func genConfig(dir string, cfg *config.Config, site *spec.SiteSpec) error {
 	for _, item := range jwtTransNames {
 		jwtTransList = append(jwtTransList, fmt.Sprintf("%s %s", item, jwtTransTemplate))
 	}
-	authImportStr := fmt.Sprintf("\"%s/rest\"", vars.ProjectOpenSourceURL)
+
+	importStr := fmt.Sprintf("\"%s/webserver\"", "github.com/templwind/templwind")
 
 	return genFile(fileGenConfig{
 		dir:             dir,
@@ -63,9 +63,9 @@ func genConfig(dir string, cfg *config.Config, site *spec.SiteSpec) error {
 		templateFile:    configTemplateFile,
 		builtinTemplate: configTemplate,
 		data: map[string]string{
-			"authImport": authImportStr,
-			"auth":       strings.Join(auths, "\n"),
-			"jwtTrans":   strings.Join(jwtTransList, "\n"),
+			"imports":  importStr,
+			"auth":     strings.Join(auths, "\n"),
+			"jwtTrans": strings.Join(jwtTransList, "\n"),
 		},
 	})
 }

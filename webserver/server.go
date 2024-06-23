@@ -17,7 +17,7 @@ import (
 type ServerOpt func(*Server)
 
 type Server struct {
-	e          *echo.Echo
+	Echo       *echo.Echo
 	conf       WebServerConf
 	middleware []echo.MiddlewareFunc
 }
@@ -34,7 +34,7 @@ func MustNewServer(c WebServerConf, opts ...ServerOpt) *Server {
 	e.Use(middleware.Recover()) // Recovery middleware
 
 	server := &Server{
-		e: e,
+		Echo: e,
 	}
 	// Apply options
 	for _, opt := range opts {
@@ -47,7 +47,7 @@ func MustNewServer(c WebServerConf, opts ...ServerOpt) *Server {
 func (s *Server) Start() {
 	// Start server
 	go func() {
-		if err := s.e.Start(fmt.Sprintf("%s:%d", s.conf.Host, s.conf.Port)); err != nil && err != http.ErrServerClosed {
+		if err := s.Echo.Start(fmt.Sprintf("%s:%d", s.conf.Host, s.conf.Port)); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Shutting down the server: %v", err)
 		}
 	}()
@@ -65,7 +65,7 @@ func (s *Server) Stop() {
 	// Create a context with a timeout of 1 second.
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
-	if err := s.e.Shutdown(shutdownCtx); err != nil {
+	if err := s.Echo.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("Server shutdown failed: %v", err)
 	}
 

@@ -1,9 +1,9 @@
 package config
 
-import {{.authImport}}
+import {{.imports}}
 
 type Config struct {
-	rest.RestConf
+	webserver.WebServerConf
 	{{.auth}}
 	{{.jwtTrans}}
 }

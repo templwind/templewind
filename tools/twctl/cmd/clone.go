@@ -11,7 +11,7 @@ import (
 
 func init() {
 	// Registering the CloneCmd command
-	rootCmd.AddCommand(CloneCmd())
+	// rootCmd.AddCommand(CloneCmd())
 }
 
 func CloneCmd() *cobra.Command {

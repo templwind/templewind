@@ -13,7 +13,7 @@ import (
 
 func init() {
 	// Registering the StarterCmd command
-	rootCmd.AddCommand(StarterCmd())
+	// rootCmd.AddCommand(StarterCmd())
 }
 
 func StarterCmd() *cobra.Command {
