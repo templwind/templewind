@@ -17,8 +17,13 @@ import (
 type ServerOpt func(*Server)
 
 type Server struct {
-	Echo       *echo.Echo
-	conf       WebServerConf
+	// Echo instance
+	Echo *echo.Echo
+
+	// WebServerConf
+	conf WebServerConf
+
+	// Middleware
 	middleware []echo.MiddlewareFunc
 }
 
