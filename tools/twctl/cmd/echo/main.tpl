@@ -27,7 +27,7 @@ func main() {
 	defer server.Stop()
 
 	// Register the handlers
-	handler.RegisterHandlers(server, svcCtx)
+	handler.RegisterHandlers(server.Echo, svcCtx)
 
 	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
 	server.Start()
