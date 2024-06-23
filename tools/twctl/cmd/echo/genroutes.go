@@ -45,7 +45,7 @@ func RegisterHandlers(server *echo.Echo, svcCtx *svc.ServiceContext) {
 `
 	routesAdditionTemplate = `
 	{{.groupName}} := server.Group(
-		"{{.prefix}}",{{if .middlewares}},
+		"{{.prefix}}",{{if .middlewares}}
 		[]echo.MiddlewareFunc{
 			{{.middlewares}}
 		}...,
@@ -125,7 +125,7 @@ func genRoutes(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) err
 		}
 
 		if g.jwtEnabled {
-			g.middlewares = append(g.middlewares, `			echojwt.WithConfig(echojwt.Config{
+			g.middlewares = append(g.middlewares, `echojwt.WithConfig(echojwt.Config{
 				NewClaimsFunc: func(c echo.Context) jwt.Claims { return new(jwtCustomClaims) },
 				SigningKey: []byte(svcCtx.Config.`+g.authName+`.AccessSecret),
 			}),`)
@@ -133,7 +133,7 @@ func genRoutes(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) err
 
 		if err := gt.Execute(&builder, map[string]string{
 			"groupName":   toPrefix(g.name) + "Group",
-			"middlewares": strings.Join(g.middlewares, "\n"),
+			"middlewares": strings.Join(g.middlewares, "\n\t\t\t"),
 			"routes":      routesBuilder.String(),
 			"prefix":      g.prefix,
 		}); err != nil {

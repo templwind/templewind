@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 )
 
 type ServerOpt func(*Server)
@@ -36,11 +35,12 @@ func WithMiddleware(middleware ...echo.MiddlewareFunc) ServerOpt {
 func MustNewServer(c WebServerConf, opts ...ServerOpt) *Server {
 	// Create a new Echo instance
 	e := echo.New()
-	e.Use(middleware.Recover()) // Recovery middleware
 
+	// Create a new server
 	server := &Server{
 		Echo: e,
 	}
+
 	// Apply options
 	for _, opt := range opts {
 		opt(server)
