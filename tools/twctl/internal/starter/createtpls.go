@@ -3,7 +3,7 @@ package starter
 import (
 	"path/filepath"
 
-	"github.com/templwind/templwind/tools/twctl/internal/utils"
+	"github.com/templwind/templwind/tools/twctl/internal/util"
 	"github.com/templwind/templwind/tools/twctl/templates"
 )
 
@@ -35,7 +35,7 @@ var (
 func getDefaultStruct(projectBasePath, framework string) defaultSettings {
 	if moduleName == "" {
 		// fmt.Println(moduleName
-		name, err := utils.GetModuleName(projectBasePath)
+		name, err := util.GetModuleName(projectBasePath)
 		if err != nil {
 			return defaultSettings{}
 		}

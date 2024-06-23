@@ -93,8 +93,8 @@ func processComponent(fs afero.Fs, component, projectNamespace, framework, desti
 		}
 
 		// Parse and rewrite import paths
-		if filepath.Ext(file) == ".go" {
-			err := rewriteImports(filepath.Join(componentDest, file), projectNamespace)
+		if filepath.Ext(file) == ".go" || filepath.Ext(file) == ".templ" {
+			err := rewriteImports(filepath.Join(componentDest, filepath.Base(file)), componentDest, projectNamespace)
 			if err != nil {
 				fmt.Printf("Error rewriting imports for file %s: %v\n", file, err)
 				continue
@@ -124,12 +124,15 @@ func processComponent(fs afero.Fs, component, projectNamespace, framework, desti
 	return nil
 }
 
-func rewriteImports(filePath, projectNamespace string) error {
+func rewriteImports(filePath, componentDest, projectNamespace string) error {
 	// Read the file content
 	fileContent, err := os.ReadFile(filePath)
 	if err != nil {
 		return fmt.Errorf("could not read file: %w", err)
 	}
+
+	fmt.Println("Rewriting imports for file:", filePath)
+	fmt.Println("componentDest:", filepath.Dir(componentDest))
 
 	// Parse the file to get the imports
 	fset := token.NewFileSet()
@@ -141,10 +144,17 @@ func rewriteImports(filePath, projectNamespace string) error {
 	// Rewrite import paths
 	for _, imp := range node.Imports {
 		importPath := strings.Trim(imp.Path.Value, "\"")
-		if strings.HasPrefix(importPath, "github.com/templwind/templwind/components/") {
-			newImportPath := fmt.Sprintf("%s/%s", projectNamespace, strings.TrimPrefix(importPath, "github.com/templwind/templwind/"))
+		fmt.Println("Found import:", importPath, strings.HasPrefix(importPath, "github.com/templwind/templwind/"))
+		if strings.HasPrefix(importPath, "github.com/templwind/templwind/components") {
+			newImportFilePath := strings.TrimPrefix(importPath, "github.com/templwind/templwind/components/")
+			// replace multiple // with a single /
+			newImportFilePath = strings.ReplaceAll(newImportFilePath, "//", "/")
+			newImportPath := fmt.Sprintf("%s/%s/%s", projectNamespace, filepath.Dir(componentDest), newImportFilePath)
 			fileContent = []byte(strings.ReplaceAll(string(fileContent), importPath, newImportPath))
+			fmt.Println("Rewrote import:", importPath, newImportPath)
 		}
+
+		fmt.Println("Finished import:", importPath)
 	}
 
 	// Write the updated content back to the file

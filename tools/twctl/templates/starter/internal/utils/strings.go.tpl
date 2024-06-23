@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"unicode"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -13,7 +12,7 @@ import (
 func CutStringFromMatch(input, pattern string) string {
 	fmt.Println(input)
 	parts := strings.Split(input, pattern)
-	if len(parts) < 2 {
+	if len(parts) {{ "<" | safeHTML }} 2 {
 		return input
 	}
 	return strings.TrimSpace(parts[1])
@@ -23,8 +22,8 @@ func CutStringFromMatch(input, pattern string) string {
 func ToCamel(s string) string {
 	words := splitIntoWords(s)
 	caser := cases.Title(language.English)
-	for i := 1; i < len(words); i++ {
-		words[i] = caser.String(words[i])
+	for i, word := range words {
+		words[i] = caser.String(word)
 	}
 	return strings.Join(words, "")
 }
@@ -67,19 +66,4 @@ func ToConstant(s string) string {
 // splitIntoWords splits the string into words based on non-alphanumeric characters
 func splitIntoWords(s string) []string {
 	return regexp.MustCompile("[^a-zA-Z0-9]+").Split(strings.ToLower(s), -1)
-}
-
-func FirstToLower(s string) string {
-	if len(s) == 0 {
-		return s
-	}
-
-	var i int
-	for i = 1; i < len(s); i++ {
-		if i+1 < len(s) && unicode.IsUpper(rune(s[i])) && unicode.IsLower(rune(s[i+1])) {
-			break
-		}
-	}
-
-	return strings.ToLower(s[:i]) + s[i:]
 }

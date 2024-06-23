@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/templwind/templwind/tools/twctl/internal/utils"
+	"github.com/templwind/templwind/tools/twctl/internal/util"
 )
 
 //go:embed all:*
@@ -112,12 +112,12 @@ func defaultOpts() writeOpts {
 			},
 			"lower":    strings.ToLower,
 			"upper":    strings.ToUpper,
-			"camel":    utils.ToCamel,
-			"kebab":    utils.ToKebab,
-			"title":    utils.ToTitle,
-			"snake":    utils.ToSnake,
-			"pascal":   utils.ToPascal,
-			"constant": utils.ToConstant,
+			"camel":    util.ToCamel,
+			"kebab":    util.ToKebab,
+			"title":    util.ToTitle,
+			"snake":    util.ToSnake,
+			"pascal":   util.ToPascal,
+			"constant": util.ToConstant,
 			"trim":     strings.TrimSpace,
 			"replace":  strings.ReplaceAll,
 			"repeat": func(s string, count int) string { // Repeats the string n times

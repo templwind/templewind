@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/templwind/templwind/tools/twctl/internal/discovery"
 	"github.com/templwind/templwind/tools/twctl/internal/installer"
-	"github.com/templwind/templwind/tools/twctl/internal/utils"
+	"github.com/templwind/templwind/tools/twctl/internal/util"
 )
 
 func init() {
@@ -29,7 +29,7 @@ func newInstallCmd(use, short string) *cobra.Command {
 		Run: func(cmd *cobra.Command, args []string) {
 			// Read module path from go.mod if projectNamespace is not set
 			if projectNamespace == "" {
-				modulePath, err := utils.GetModuleName(".")
+				modulePath, err := util.GetModuleName(".")
 				if err != nil {
 					log.Fatalf("Error reading module path from go.mod: %v", err)
 				}
