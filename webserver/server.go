@@ -39,6 +39,7 @@ func MustNewServer(c WebServerConf, opts ...ServerOpt) *Server {
 	// Create a new server
 	server := &Server{
 		Echo: e,
+		conf: c,
 	}
 
 	// Apply options
@@ -52,7 +53,6 @@ func MustNewServer(c WebServerConf, opts ...ServerOpt) *Server {
 func (s *Server) Start() {
 	// Start server
 	go func() {
-		fmt.Printf("%s:%d\n\n", s.conf.Host, s.conf.Port)
 		if err := s.Echo.Start(fmt.Sprintf("%s:%d", s.conf.Host, s.conf.Port)); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("Shutting down the server: %v", err)
 		}
