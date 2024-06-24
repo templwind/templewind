@@ -3,6 +3,8 @@ package db
 import (
 	"fmt"
 	"math"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -86,6 +88,18 @@ func connect(opts *DBConfig) (*sqlx.DB, error) {
 		return nil, err
 	}
 
+	if u.Driver == "sqlite3" {
+		// Ensure the database file and directory exist
+		dbPath := u.DSN
+		if dbPath[0] == '/' {
+			dbPath = dbPath[1:]
+		}
+
+		if err := ensureSQLiteFile(dbPath); err != nil {
+			return nil, err
+		}
+	}
+
 	dbConn, err := sqlx.Open(u.Driver, u.DSN)
 	if err != nil {
 		return nil, err
@@ -100,6 +114,23 @@ func connect(opts *DBConfig) (*sqlx.DB, error) {
 	}
 
 	return dbConn, nil
+}
+
+// ensureSQLiteFile ensures that the SQLite database file and its directory exist
+func ensureSQLiteFile(dbPath string) error {
+	dir := filepath.Dir(dbPath)
+	if _, err := os.Stat(dir); os.IsNotExist(err) {
+		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
+			return fmt.Errorf("failed to create directory %s: %v", dir, err)
+		}
+	}
+
+	file, err := os.OpenFile(dbPath, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return fmt.Errorf("failed to create or open database file %s: %v", dbPath, err)
+	}
+	file.Close()
+	return nil
 }
 
 // GetDB returns the database connection
