@@ -67,7 +67,7 @@ pnpm-build:
 .PHONY: build
 build:
 	make templ
-	go build -ldflags "-X main.Environment=production" -o ./tmp/$(APP_NAME) .
+	go build -tags sqlite_no_cgo -ldflags "-X main.Environment=production" -o ./tmp/$(APP_NAME) .
 
 ## staticcheck: run staticcheck
 .PHONY: staticcheck
@@ -80,7 +80,7 @@ xo:
 	@mkdir -p ./internal/models
 	@xo schema \
 		'file:${DSN}??loc=auto' \
-		--go-field-tag='json:"{{ .SQLName }}" db:"{{ .SQLName }}" form:"{{ .SQLName }}"' \
+		--go-field-tag='json:"{{ "{{" }} .SQLName {{ "}}" }}" db:"{{ "{{" }} .SQLName {{ "}}" }}" form:"{{ "{{" }} .SQLName {{ "}}" }}"' \
 		--include=$(XO_INCLUDES) \
 		-o ./internal/models \
 		-k field

@@ -36,11 +36,7 @@ func genServiceContext(dir, rootPkg string, cfg *config.Config, site *spec.SiteS
 			fmt.Sprintf("middleware.New%s().%s", strings.Title(name), "Handle"))
 	}
 
-	configImport := "\"" + pathx.JoinPackages(rootPkg, types.ConfigDir) + "\""
-	if len(middlewareStr) > 0 {
-		configImport += "\n\t\"" + pathx.JoinPackages(rootPkg, types.MiddlewareDir) + "\""
-		configImport += "\n\n\t\"github.com/labstack/echo/v4\""
-	}
+	imports := genSvcImports(rootPkg, len(middlewares) > 0)
 
 	return genFile(fileGenConfig{
 		dir:             dir,
@@ -51,10 +47,28 @@ func genServiceContext(dir, rootPkg string, cfg *config.Config, site *spec.SiteS
 		templateFile:    contextTemplateFile,
 		builtinTemplate: contextTemplate,
 		data: map[string]string{
-			"configImport":         configImport,
+			"imports":              imports,
 			"config":               "config.Config",
 			"middleware":           middlewareStr,
 			"middlewareAssignment": middlewareAssignment,
 		},
 	})
+}
+
+func genSvcImports(rootPkg string, hasMiddlware bool) string {
+	imports := []string{}
+	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(rootPkg, types.ConfigDir)))
+	if hasMiddlware {
+		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(rootPkg, types.MiddlewareDir)))
+	}
+
+	imports = append(imports, "\n\n")
+	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/jmoiron/sqlx"))
+	imports = append(imports, fmt.Sprintf("\"%s/db\"", "github.com/templwind/templwind"))
+
+	if hasMiddlware {
+		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/labstack/echo/v4"))
+	}
+
+	return strings.Join(imports, "\n\t")
 }

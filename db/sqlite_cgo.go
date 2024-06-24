@@ -1,5 +1,4 @@
-//go:build sqlite_cgo
-// +build sqlite_cgo
+//go:build cgo
 
 package db
 

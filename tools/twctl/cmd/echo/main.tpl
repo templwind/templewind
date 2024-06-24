@@ -14,7 +14,7 @@ func main() {
 
 	// Load the configuration file
 	var c config.Config
-	conf.MustLoad(*configFile, &c)
+	conf.MustLoad(*configFile, &c, conf.UseEnv())
 
 	// Create a new service context
 	svcCtx := svc.NewServiceContext(c)

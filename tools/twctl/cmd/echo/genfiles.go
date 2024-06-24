@@ -171,12 +171,18 @@ func genNpmFiles(dir string, site *spec.SiteSpec) error {
 			templateName:    "localEnvTemplate",
 			templateFile:    localEnvTemplateFile,
 			builtinTemplate: localEnvTemplate,
+			data: map[string]string{
+				"dsnName": strings.ToLower(filename),
+			},
 		},
 		{
 			filename:        "Makefile",
 			templateName:    "makefileTemplate",
 			templateFile:    makefileTemplateFile,
 			builtinTemplate: makefileTemplate,
+			data: map[string]string{
+				"serviceName": filename,
+			},
 		},
 	}
 
@@ -189,9 +195,7 @@ func genNpmFiles(dir string, site *spec.SiteSpec) error {
 			category:        category,
 			templateFile:    file.templateFile,
 			builtinTemplate: file.builtinTemplate,
-			data: map[string]string{
-				"serviceName": filename,
-			},
+			data:            file.data,
 		}); err != nil {
 			fmt.Println(err.Error())
 		}
