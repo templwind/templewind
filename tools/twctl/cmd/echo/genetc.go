@@ -52,6 +52,7 @@ func genEtc(dir string, cfg *config.Config, site *spec.SiteSpec) error {
 		builtinTemplate: etcTemplate,
 		data: map[string]string{
 			"serviceName": site.Name,
+			"dsnName":     strings.ToLower(site.Name),
 			"host":        host,
 			"port":        port,
 			"auth":        strings.Join(auths, "\n"),

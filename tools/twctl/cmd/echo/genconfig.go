@@ -52,7 +52,8 @@ func genConfig(dir string, cfg *config.Config, site *spec.SiteSpec) error {
 		jwtTransList = append(jwtTransList, fmt.Sprintf("%s %s", item, jwtTransTemplate))
 	}
 
-	importStr := fmt.Sprintf("\"%s/webserver\"", "github.com/templwind/templwind")
+	imports := genConfigImports()
+	// imports := fmt.Sprintf("\"%s/webserver\"", "github.com/templwind/templwind")
 
 	return genFile(fileGenConfig{
 		dir:             dir,
@@ -63,9 +64,18 @@ func genConfig(dir string, cfg *config.Config, site *spec.SiteSpec) error {
 		templateFile:    configTemplateFile,
 		builtinTemplate: configTemplate,
 		data: map[string]string{
-			"imports":  importStr,
+			"imports":  imports,
 			"auth":     strings.Join(auths, "\n"),
 			"jwtTrans": strings.Join(jwtTransList, "\n"),
 		},
 	})
+}
+
+func genConfigImports() string {
+	imports := []string{
+		fmt.Sprintf("\"%s/db\"", "github.com/templwind/templwind"),
+		fmt.Sprintf("\"%s/webserver\"", "github.com/templwind/templwind"),
+	}
+
+	return strings.Join(imports, "\n\t")
 }
