@@ -67,7 +67,7 @@ pnpm-build:
 .PHONY: build
 build:
 	make templ
-	go build -tags sqlite_no_cgo -ldflags "-X main.Environment=production" -o ./tmp/$(APP_NAME) .
+	go build -ldflags "-X main.Environment=production" -o ./tmp/$(APP_NAME) .
 
 ## staticcheck: run staticcheck
 .PHONY: staticcheck
