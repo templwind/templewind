@@ -1,6 +1,8 @@
 package config
 
-import {{.imports}}
+import (
+	{{.imports}}
+)
 
 type Config struct {
 	webserver.WebServerConf
