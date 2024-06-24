@@ -31,6 +31,9 @@ const (
 	mainTsTemplateFile          = "main.ts.tpl"
 	errorTsTemplateFile         = "error.ts.tpl"
 	gitignoreTemplateFile       = "gitignore.tpl"
+	schemaTemplateFile          = "1_schema.tpl"
+	localEnvTemplateFile        = "local.env.tpl"
+	makefileTemplateFile        = "makefile.tpl"
 )
 
 var templates = map[string]string{
@@ -57,6 +60,9 @@ var templates = map[string]string{
 	mainTsTemplateFile:          mainTsTemplate,
 	errorTsTemplateFile:         errorTsTemplate,
 	gitignoreTemplateFile:       gitignoreTemplate,
+	schemaTemplateFile:          schemaTemplate,
+	localEnvTemplateFile:        localEnvTemplate,
+	makefileTemplateFile:        makefileTemplate,
 }
 
 // Category returns the category of the api files.

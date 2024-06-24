@@ -6,6 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/templwind/templwind/tools/twctl/cmd/echo"
+	"github.com/templwind/templwind/tools/twctl/cmd/parsexo"
 	"github.com/templwind/templwind/tools/twctl/cmd/site"
 )
 
@@ -23,6 +24,7 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	rootCmd.AddCommand(site.Cmd())
 	rootCmd.AddCommand(echo.Cmd())
+	rootCmd.AddCommand(parsexo.Cmd())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)

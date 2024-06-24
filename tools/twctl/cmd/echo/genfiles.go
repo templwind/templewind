@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	"github.com/templwind/templwind/tools/twctl/internal/util"
 	"github.com/templwind/templwind/tools/twctl/pkg/site/spec"
@@ -42,8 +43,18 @@ var errorTsTemplate string
 //go:embed gitignore.tpl
 var gitignoreTemplate string
 
+//go:embed schema.sql
+var schemaTemplate string
+
+//go:embed local.env.tpl
+var localEnvTemplate string
+
+//go:embed makefile.tpl
+var makefileTemplate string
+
 var (
 	srcDir       = "src"
+	migrationDir = "db/migrations"
 	componentDir = filepath.Join(srcDir, "components")
 )
 
@@ -75,7 +86,7 @@ func genNpmFiles(dir string, site *spec.SiteSpec) error {
 			templateFile:    packageTemplateFile,
 			builtinTemplate: packageTemplate,
 			data: map[string]string{
-				"serviceName": filename,
+				"serviceName": strings.ToLower(filename),
 			},
 		},
 		{
@@ -147,6 +158,25 @@ func genNpmFiles(dir string, site *spec.SiteSpec) error {
 			templateName:    "gitignoreTemplate",
 			templateFile:    gitignoreTemplateFile,
 			builtinTemplate: gitignoreTemplate,
+		},
+		{
+			filename:        "1_schema.sql",
+			subdir:          migrationDir,
+			templateName:    "schemaTemplate",
+			templateFile:    schemaTemplateFile,
+			builtinTemplate: schemaTemplate,
+		},
+		{
+			filename:        ".env",
+			templateName:    "localEnvTemplate",
+			templateFile:    localEnvTemplateFile,
+			builtinTemplate: localEnvTemplate,
+		},
+		{
+			filename:        "Makefile",
+			templateName:    "makefileTemplate",
+			templateFile:    makefileTemplateFile,
+			builtinTemplate: makefileTemplate,
 		},
 	}
 
