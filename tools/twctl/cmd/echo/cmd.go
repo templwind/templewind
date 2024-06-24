@@ -110,7 +110,7 @@ func doGenProject(siteFile, dir string) error {
 	logx.Must(genHandlers(dir, rootPkg, cfg, siteSpec))
 	logx.Must(genLogic(dir, rootPkg, cfg, siteSpec))
 	logx.Must(genMiddleware(dir, cfg, siteSpec))
-	logx.Must(genAir(dir))
+	logx.Must(genAir(dir, siteSpec))
 	logx.Must(genNpmFiles(dir, siteSpec))
 
 	if err := backupAndSweep(siteFile); err != nil {

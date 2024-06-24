@@ -3,8 +3,8 @@ tmp_dir = "tmp"
 
 [build]
 args_bin = ["serve"]
-bin = "./tmp/main"
-cmd = "templ generate && go build -o ./tmp/main ."
+bin = "./tmp/{{.serviceName}}"
+cmd = "make build"
 delay = 1000
 exclude_dir = ["assets", "tmp", "vendor"]
 exclude_file = []
@@ -14,17 +14,18 @@ follow_symlink = false
 full_bin = ""
 include_dir = []
 include_ext = [
+  "css",
+  "env",
   "go",
-  "tpl",
-  "tmpl",
-  "templ",
   "html",
+  "js",
+  "sql",
+  "templ",
+  "tmpl",
+  "tpl",
+  "ts",
   "yaml",
   "yml",
-  "css",
-  "sql",
-  "js",
-  "ts",
 ]
 kill_delay = "0s"
 log = "build-errors.log"
