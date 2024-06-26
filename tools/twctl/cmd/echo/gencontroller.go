@@ -1,11 +1,14 @@
 package echo
 
 import (
+	"bytes"
 	_ "embed"
 	"fmt"
+	"os"
 	"path"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/templwind/templwind/tools/twctl/internal/types"
 	"github.com/templwind/templwind/tools/twctl/internal/util"
@@ -37,26 +40,95 @@ func genController(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec)
 	return nil
 }
 
-func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, handler spec.Handler) error {
+type ControllerMethodConfig struct {
+	RequestType    string
+	ResponseType   string
+	Request        string
+	ReturnString   string
+	ResponseString string
+	HasResp        bool
+	HasReq         bool
+	HandlerName    string
+	HasDoc         bool
+	Doc            string
+	HasPage        bool
+	ControllerName string
+	ControllerType string
+	Call           string
+}
 
-	type MethodConfig struct {
-		RequestType    string
-		ResponseType   string
-		Request        string
-		ReturnString   string
-		ResponseString string
-		HasResp        bool
-		HasReq         bool
-		HandlerName    string
-		HasDoc         bool
-		Doc            string
-		HasPage        bool
-		ControllerName string
-		ControllerType string
-		Call           string
+func addMissingMethods(methods []ControllerMethodConfig, dir, subDir, fileName string) error {
+	// Read the file and look for all the methods and compare with the defined methods
+	filePath := path.Join(dir, subDir, fileName)
+	fbytes, err := os.ReadFile(filePath)
+	if err != nil {
+		return fmt.Errorf("read file failed: %w", err)
 	}
 
-	methods := []MethodConfig{}
+	fileContent := string(fbytes)
+	var newMethods []string
+
+	for _, method := range methods {
+		if !strings.Contains(fileContent, method.Call) {
+			// Add the method definition to the newMethods slice
+			newMethods = append(newMethods, generateMethodDefinition(method))
+		}
+	}
+
+	// If there are new methods to add, append them to the file
+	if len(newMethods) > 0 {
+		f, err := os.OpenFile(filePath, os.O_APPEND|os.O_WRONLY, 0600)
+		if err != nil {
+			return fmt.Errorf("open file for writing failed: %w", err)
+		}
+		defer f.Close()
+
+		for _, newMethod := range newMethods {
+			if _, err := f.WriteString(newMethod); err != nil {
+				return fmt.Errorf("write to file failed: %w", err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// This is the function to generate the method definition based on your template
+func generateMethodDefinition(method ControllerMethodConfig) string {
+	tmpl := `{{if .HasDoc}}{{.Doc}}{{end}}
+func (l *{{.ControllerType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
+	// todo: add your controller here and delete this line
+
+	{{.ReturnString}}
+}
+`
+	t, err := template.New("method").Parse(tmpl)
+	if err != nil {
+		panic(fmt.Sprintf("parsing template failed: %v", err))
+	}
+
+	var buf bytes.Buffer
+	err = t.Execute(&buf, method)
+	if err != nil {
+		panic(fmt.Sprintf("executing template failed: %v", err))
+	}
+
+	return buf.String()
+}
+
+func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, handler spec.Handler) error {
+
+	subDir := getControllerFolderPath(server, handler)
+	filename := path.Join(dir, subDir, strings.ToLower(handler.Name)+".go")
+	fmt.Println("filename::", filename)
+
+	fileExists := false
+	// check if the file exists
+	if pathx.FileExists(filename) {
+		fileExists = true
+	}
+
+	methods := []ControllerMethodConfig{}
 	for _, method := range handler.Methods {
 
 		var responseString string
@@ -114,7 +186,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		controllerName := strings.ToLower(util.ToCamel(handler.Name))
 
 		// fmt.Println("handlerName:", handlerName)
-		methods = append(methods, MethodConfig{
+		methods = append(methods, ControllerMethodConfig{
 			HandlerName:    handlerName,
 			RequestType:    requestType,
 			ResponseType:   responseString,
@@ -132,10 +204,16 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		})
 	}
 
+	if fileExists {
+		return addMissingMethods(methods,
+			dir,
+			subDir,
+			strings.ToLower(handler.Name)+".go")
+	}
+
 	templImports := genTemplImports(rootPkg)
 
 	fmt.Println("templImports", templImports)
-	subDir := getControllerFolderPath(server, handler)
 	// templ file first
 	genFile(fileGenConfig{
 		dir:             dir,
@@ -153,10 +231,6 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 	})
 	controllerType := strings.Title(getControllerName(handler))
 	imports := genControllerImports(handler, rootPkg)
-
-	// filename := path.Join(dir, subDir, strings.ToLower(handler.Name)+".go")
-	// fmt.Println("filename::", filename)
-	// os.Remove(filename)
 
 	err := genFile(fileGenConfig{
 		dir:             dir,

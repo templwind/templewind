@@ -3,6 +3,7 @@ package echo
 import (
 	_ "embed"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -55,6 +56,10 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 		return err
 	}
 
+	subDir := getHandlerFolderPath(server)
+	handlerFile := path.Join(dir, subDir, filename+".go")
+	os.Remove(handlerFile)
+
 	type MethodConfig struct {
 		RequestType    string
 		ResponseType   string
@@ -85,12 +90,6 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 
 		handlerName := util.ToTitle(getHandlerName(handler, &method))
 
-		// handlerName := util.ToTitle(strings.Join([]string{
-		// 	handlerName,
-		// 	strings.Title(method.Method),
-		// 	// strings.ReplaceAll(method.Route, ":", " By "),
-		// }, ""))
-
 		// fmt.Println("handlerName:", handlerName)
 		methods = append(methods, MethodConfig{
 			HandlerName:    handlerName,
@@ -110,7 +109,7 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 
 	return genFile(fileGenConfig{
 		dir:             dir,
-		subdir:          getHandlerFolderPath(server),
+		subdir:          subDir,
 		filename:        filename + ".go",
 		templateName:    "handlerTemplate",
 		category:        category,
