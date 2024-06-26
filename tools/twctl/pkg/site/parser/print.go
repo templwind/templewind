@@ -49,7 +49,7 @@ func PrintModule(m ast.ModuleNode, indent int) {
 	PrintMap(m.Attrs, indent+1)
 }
 
-func PrintMap(m map[string]string, indent int) {
+func PrintMap(m map[string]interface{}, indent int) {
 	for key, value := range m {
 		printIndent(indent)
 		fmt.Println(key+":", value)
@@ -60,8 +60,9 @@ func PrintMap(m map[string]string, indent int) {
 func PrintService(s ast.ServiceNode, indent int) {
 	printIndent(indent)
 	fmt.Println("Service:", s.Name)
+	handlerIndent := indent + 1
 	for _, h := range s.Handlers {
-		PrintHandler(h, indent+1)
+		PrintHandler(h, handlerIndent)
 	}
 }
 
@@ -69,24 +70,28 @@ func PrintService(s ast.ServiceNode, indent int) {
 func PrintHandler(h ast.HandlerNode, indent int) {
 	printIndent(indent)
 	fmt.Println("Handler:", h.Name)
+	// printIndent(indent)
+	for _, m := range h.Methods {
+		PrintMethod(m, indent+1)
+	}
+}
+
+func PrintMethod(m ast.MethodNode, indent int) {
+	if m.Page != nil {
+		PrintPage(*m.Page, indent)
+	}
+	if m.Doc != nil {
+		PrintDoc(*m.Doc, indent)
+	}
+
+	printIndent(indent)
+	fmt.Println("Method:", m.Method)
 	printIndent(indent + 1)
-	fmt.Println("Method:", h.Method)
+	fmt.Println("Route:", m.Route)
 	printIndent(indent + 1)
-	fmt.Println("Route:", h.Route)
-	if h.Request != "" {
-		printIndent(indent + 1)
-		fmt.Println("Request:", h.Request)
-	}
-	if h.Response != "" {
-		printIndent(indent + 1)
-		fmt.Println("Response:", h.Response)
-	}
-	if h.Page != nil {
-		PrintPage(*h.Page, indent+1)
-	}
-	if h.Doc != nil {
-		PrintDoc(*h.Doc, indent+1)
-	}
+	fmt.Println("Request:", m.Request)
+	printIndent(indent + 1)
+	fmt.Println("Response:", m.Response)
 }
 
 // PrintPage prints a page node with indentation

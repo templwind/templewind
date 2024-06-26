@@ -64,11 +64,13 @@ func genSvcImports(rootPkg string, hasMiddlware bool) string {
 
 	imports = append(imports, "\n\n")
 	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/jmoiron/sqlx"))
-	imports = append(imports, fmt.Sprintf("\"%s/db\"", "github.com/templwind/templwind"))
 
 	if hasMiddlware {
 		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/labstack/echo/v4"))
 	}
+
+	imports = append(imports, fmt.Sprintf("_ \"%s\"", "github.com/mattn/go-sqlite3"))
+	imports = append(imports, fmt.Sprintf("\"%s/db\"", "github.com/templwind/templwind"))
 
 	return strings.Join(imports, "\n\t")
 }

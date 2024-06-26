@@ -2,6 +2,7 @@ package parser
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/templwind/templwind/tools/twctl/pkg/site/ast"
@@ -52,6 +53,7 @@ func (p *Parser) Parse() ast.SiteAST {
 		}
 		p.nextToken()
 	}
+
 	return astTree
 }
 
@@ -104,75 +106,117 @@ func (p *Parser) parseServer() ast.ServerNode {
 		// fmt.Println("Parsing server", p.curToken.Literal, p.curToken.Type)
 		if p.curToken.Type == lexer.AT_SERVICE {
 			node.Services = append(node.Services, p.parseService())
-
 			// fmt.Println("Parsing server", node)
 			// fmt.Println("TOKEN", p.curToken.Literal, p.curToken.Type)
-			// os.Exit(1)
 		}
 	}
-
 	return *node
 }
 
 func (p *Parser) parseService() ast.ServiceNode {
 	node := ast.NewServiceNode(p.curToken.Literal)
 	p.nextToken() // skip 'service'
-	activeHandler := ast.HandlerNode{}
-
-	for p.curToken.Type == lexer.AT_PAGE ||
-		p.curToken.Type == lexer.AT_DOC ||
-		p.curToken.Type == lexer.AT_HANDLER {
-		if p.curToken.Type == lexer.AT_HANDLER {
-			// fmt.Println("HANDLER", p.curToken.Literal, p.curToken.Type)
-			node.Handlers = append(node.Handlers, p.parseHandler(activeHandler))
-			activeHandler = ast.HandlerNode{}
-		} else if p.curToken.Type == lexer.AT_PAGE {
-			activeHandler.Page = p.parsePage()
-			// fmt.Println("PAGE", p.curToken.Literal, p.peekToken.Literal, p.curToken.Type)
-			continue
-		} else if p.curToken.Type == lexer.AT_DOC {
-			// fmt.Println("DOC", p.curToken.Literal, p.curToken.Type)
-			activeHandler.Doc = p.parseDoc()
-			continue
-		}
+	// fmt.Println("TOKEN", p.curToken.Literal, p.curToken.Type)
+	for p.curToken.Type == lexer.AT_HANDLER {
+		node.Handlers = append(node.Handlers, p.parseHandler())
 	}
 	return *node
 }
 
-func (p *Parser) parseHandler(handler ast.HandlerNode) ast.HandlerNode {
+func (p *Parser) parseHandler() ast.HandlerNode {
 	name := p.curToken.Literal
+	handler := ast.HandlerNode{}
+	handler.Name = name
+	handler.Type = ast.NodeTypeHandler
 	p.nextToken()
 
-	literal := strings.Replace(p.curToken.Literal, "(", " (", -1)
-	literal = strings.Join(strings.Fields(literal), " ")
+	activeMethod := ast.MethodNode{}
+	methods := []ast.MethodNode{}
+	for p.curToken.Type == lexer.AT_PAGE ||
+		p.curToken.Type == lexer.AT_DOC ||
+		p.curToken.Type == lexer.AT_GET_METHOD ||
+		p.curToken.Type == lexer.AT_POST_METHOD ||
+		p.curToken.Type == lexer.AT_PUT_METHOD ||
+		p.curToken.Type == lexer.AT_DELETE_METHOD ||
+		p.curToken.Type == lexer.AT_PATCH_METHOD {
 
-	parts := strings.Fields(literal)
+		if p.curToken.Type == lexer.AT_PAGE {
+			activeMethod.Page = p.parsePage()
+			// fmt.Println("PAGE", p.curToken.Literal, p.peekToken.Literal, p.curToken.Type)
+			continue
+		} else if p.curToken.Type == lexer.AT_DOC {
+			// fmt.Println("DOC", p.curToken.Literal, p.curToken.Type)
+			activeMethod.Doc = p.parseDoc()
+			continue
+		} else if p.curToken.Type == lexer.AT_GET_METHOD ||
+			p.curToken.Type == lexer.AT_POST_METHOD ||
+			p.curToken.Type == lexer.AT_PUT_METHOD ||
+			p.curToken.Type == lexer.AT_DELETE_METHOD ||
+			p.curToken.Type == lexer.AT_PATCH_METHOD {
 
-	handler.BaseNode = ast.NewBaseNode(ast.NodeTypeHandler, name)
-	if len(parts) < 2 {
-		return handler
+			p.parseMethod(&activeMethod)
+			methods = append(methods, activeMethod)
+			activeMethod = ast.MethodNode{}
+		}
+
+		// methods = append(methods, p.parseMethod())
+
+		p.nextToken()
 	}
-	handler.Method = parts[0]
-	handler.Route = parts[1]
 
-	if len(parts) > 2 {
-		handler.Request = parts[2][1 : len(parts[2])-1]
-		handler.RequestType = spec.NewStructType(handler.Request, nil, nil, nil)
-	}
-	if len(parts) > 3 {
-		handler.Response = parts[4][1 : len(parts[4])-1]
-		handler.ResponseType = spec.NewStructType(handler.Response, nil, nil, nil)
+	if methods != nil {
+		handler.Methods = methods
 	}
 
-	p.nextToken()
-	// fmt.Println("CURRENT TOKEN", p.curToken.Literal)
-
-	// fmt.Println("HANDLER", handler)
-	// os.Exit(1)
 	return handler
 }
 
+func (p *Parser) parseMethod(method *ast.MethodNode) {
+	switch p.curToken.Type {
+	case lexer.AT_GET_METHOD:
+		method.Method = "GET"
+	case lexer.AT_POST_METHOD:
+		method.Method = "POST"
+	case lexer.AT_PUT_METHOD:
+		method.Method = "PUT"
+	case lexer.AT_DELETE_METHOD:
+		method.Method = "DELETE"
+	case lexer.AT_PATCH_METHOD:
+		method.Method = "PATCH"
+	default:
+		return
+	}
+
+	literal := p.curToken.Literal
+	literal = strings.ReplaceAll(literal, "(", " (")
+	// use regex to replace all spaces with a single space
+	re := regexp.MustCompile(`\s+`)
+	literal = re.ReplaceAllString(literal, " ")
+	// use regex to remove the word returns
+	// post /forgot-password(ForgotPasswordRequest) returns (ForgotPasswordResponse)
+	re = regexp.MustCompile(`\s+returns\s+`)
+	literal = re.ReplaceAllString(literal, " ")
+
+	parts := strings.Fields(literal)
+
+	method.BaseNode = ast.NewBaseNode(ast.NodeTypeMethod, method.Method)
+	method.Route = parts[0]
+	if len(parts) < 2 {
+		return
+	}
+
+	if len(parts) > 1 {
+		method.Request = parts[1][1 : len(parts[1])-1]
+		method.RequestType = spec.NewStructType(method.Request, nil, nil, nil)
+	}
+	if len(parts) > 2 {
+		method.Response = parts[2][1 : len(parts[2])-1]
+		method.ResponseType = spec.NewStructType(method.Response, nil, nil, nil)
+	}
+}
+
 func (p *Parser) parsePage() *ast.PageNode {
+	// fmt.Println("TOKEN", p.curToken.Literal, p.curToken.Type)
 	attrs := p.parseAttributes()
 	return ast.NewPageNode(attrs)
 }
@@ -182,15 +226,27 @@ func (p *Parser) parseDoc() *ast.DocNode {
 	return ast.NewDocNode(attrs)
 }
 
-func (p *Parser) parseAttributes() map[string]string {
-	attrs := make(map[string]string)
+// parseAttributes parses attributes including nested ones
+func (p *Parser) parseAttributes() map[string]interface{} {
+	attrs := make(map[string]interface{})
 	p.nextToken()
 	for p.curToken.Type != lexer.CLOSE_PAREN {
+		// Check for key-value pairs
 		parts := strings.SplitN(p.curToken.Literal, ":", 2)
 		if len(parts) == 2 {
-			attrs[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
+			key := strings.TrimSpace(parts[0])
+			value := strings.TrimSpace(parts[1])
+			attrs[key] = value
+		} else {
+			// Check for nested attributes
+			parts = strings.SplitN(p.curToken.Literal, "(", 2)
+			if len(parts) == 2 {
+				key := strings.TrimSpace(parts[0])
+				nestedAttrs := p.parseAttributes()
+				attrs[key] = nestedAttrs
+				continue
+			}
 		}
-		// fmt.Println("PARTS", parts, p.curToken.Literal, attrs)
 		p.nextToken()
 	}
 	p.nextToken() // skip ')'
@@ -233,7 +289,7 @@ func (p *Parser) parseMenu() ast.MenuNode {
 }
 
 func (p *Parser) parseModule() ast.ModuleNode {
-	attrs := make(map[string]string)
+	attrs := make(map[string]interface{})
 	for p.curToken.Type != lexer.CLOSE_PAREN {
 		parts := strings.SplitN(p.curToken.Literal, ":", 2)
 		if len(parts) == 2 {
@@ -245,7 +301,7 @@ func (p *Parser) parseModule() ast.ModuleNode {
 	// fmt.Println("MODULE ATTRS", attrs)
 	node := ast.NewModuleNode(attrs["name"], attrs)
 	node.Attrs = attrs
-	node.Source = attrs["source"]
-	node.Prefix = attrs["prefix"]
+	node.Source = attrs["source"].(string)
+	node.Prefix = attrs["prefix"].(string)
 	return *node
 }

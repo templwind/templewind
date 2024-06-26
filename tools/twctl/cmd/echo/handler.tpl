@@ -1,28 +1,38 @@
 package {{.PkgName}}
 
 import (
-	"github.com/labstack/echo/v4"
-	"github.com/zeromicro/go-zero/rest/httpx"
-	{{.ImportPackages}}
+	{{.Imports}}
 )
 
+{{range .Methods}}
 {{if .HasDoc}}{{.Doc}}{{end}}
 func {{.HandlerName}}(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 	return func(e echo.Context) error {
-		{{if .HasRequest}}var req types.{{.RequestType}}
+		{{if .HasReq}}var req types.{{.RequestType}}
 		if err := httpx.Parse(e.Request(), &req); err != nil {
-			httpx.ErrorCtx(e.Request().Context(), e.Response(), err)
-			return err
+			// Log the error and send a generic error message to the client
+			e.Logger().Error(err)
+			// Send a JSON error response
+			return e.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": "Internal Server Error",
+			})
 		}
-
-		{{end}}l := {{.LogicName}}.New{{.LogicType}}(e.Request().Context(), svcCtx)
-		{{if .HasResp}}resp, {{end}}err := l.{{.Call}}({{if .HasRequest}}&req, {{end}}e)
+		
+		{{end}}l := {{.ControllerName}}.New{{.ControllerType}}(e.Request().Context(), svcCtx)
+		{{if .HasResp}}resp, {{end}}err := l.{{.Call}}({{if .HasReq}}&req, {{end}}e)
 		if err != nil {
-			httpx.ErrorCtx(e.Request().Context(), e.Response(), err)
-		} else {
-			{{if .HasResp}}httpx.OkJsonCtx(e.Request().Context(), e.Response(), resp){{else}}httpx.Ok(e.Response()){{end}}
+			// Log the error and send a generic error message to the client
+			e.Logger().Error(err)
+			{{if .HasResp}}
+			// Send a JSON error response
+			return e.JSON(http.StatusInternalServerError, map[string]interface{}{
+				"error": "Internal Server Error",
+			}){{else}}
+			// Send an HTML error response
+			return e.HTML(http.StatusInternalServerError, "<h1>Internal Server Error</h1>"){{end}}
 		}
-		return nil
+		{{if .HasResp}}
+		return e.JSON(http.StatusOK, resp){{else}}return nil{{end}}
 	}
 }
-
+{{end}}

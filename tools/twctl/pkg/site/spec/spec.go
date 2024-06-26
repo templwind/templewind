@@ -14,7 +14,7 @@ type (
 
 	// Annotation defines key-value properties for annotations
 	Annotation struct {
-		Properties map[string]string
+		Properties map[string]interface{}
 	}
 
 	// SiteSpec describes a Site file
@@ -30,7 +30,7 @@ type (
 		Name   string
 		Source string
 		Prefix string
-		Attr   map[string]string
+		Attr   map[string]interface{}
 	}
 
 	// Server describes a server block with its services
@@ -45,18 +45,24 @@ type (
 		Handlers []Handler
 	}
 
-	// Handler describes a Site handler
-	Handler struct {
-		Name           string
+	Method struct {
 		Method         string
 		Route          string
+		Request        string
 		RequestType    Type
+		Response       string
 		ResponseType   Type
 		Page           *Page
 		Doc            *DocNode
 		HandlerDoc     Doc
 		HandlerComment Doc
 		DocAnnotation  Annotation
+	}
+
+	// Handler describes a Site handler
+	Handler struct {
+		Name    string
+		Methods []Method
 	}
 
 	// Page represents a page in a handler
@@ -125,7 +131,7 @@ type (
 )
 
 // NewAnnotation creates a new annotation
-func NewAnnotation(properties map[string]string) Annotation {
+func NewAnnotation(properties map[string]interface{}) Annotation {
 	return Annotation{
 		Properties: properties,
 	}
@@ -162,7 +168,7 @@ func NewService(name string) *Service {
 }
 
 // NewModule creates a new module node
-func NewModule(name string, attr map[string]string) Module {
+func NewModule(name string, attr map[string]interface{}) Module {
 	return Module{
 		Name: name,
 		Attr: attr,
@@ -170,8 +176,15 @@ func NewModule(name string, attr map[string]string) Module {
 }
 
 // NewHandler creates a new handler node
-func NewHandler(name, method, route string, requestType, responseType interface{}, page *Page, doc *DocNode) *Handler {
+func NewHandler(name string, methods []Method) *Handler {
+	return &Handler{
+		Name:    name,
+		Methods: methods,
+	}
+}
 
+// NewMethod creates a new method for a handler.
+func NewMethod(method, route string, requestType, responseType interface{}, page *Page, doc *DocNode) Method {
 	var (
 		reqType Type
 		resType Type
@@ -185,11 +198,12 @@ func NewHandler(name, method, route string, requestType, responseType interface{
 		resType = responseType.(Type)
 	}
 
-	return &Handler{
-		Name:         name,
-		Method:       method,
-		Route:        route,
-		RequestType:  reqType,
+	return Method{
+		Method: method,
+		Route:  route,
+		// Request:      request,
+		RequestType: reqType,
+		// Response:     response,
 		ResponseType: resType,
 		Page:         page,
 		Doc:          doc,
@@ -246,10 +260,25 @@ func NewInterfaceType(name string) *InterfaceType {
 // GetAnnotation returns the value by specified key from @server
 func (s Server) GetAnnotation(key string) string {
 	if s.Annotation.Properties == nil {
+		// fmt.Printf("No properties found for key: %s\n", key)
 		return ""
 	}
 
-	return s.Annotation.Properties[key]
+	// fmt.Println("Properties: ", s.Annotation.Properties)
+
+	value, ok := s.Annotation.Properties[key]
+	if !ok {
+		// fmt.Printf("No value found for key: %s\n", key)
+		return ""
+	}
+
+	strValue, ok := value.(string)
+	if !ok {
+		// fmt.Printf("Value for key %s is not a string: %v\n", key, value)
+		return ""
+	}
+
+	return strValue
 }
 
 // Methods to implement the Type interface for StructType
@@ -368,5 +397,22 @@ func (t *InterfaceType) GetDocuments() []string {
 }
 
 func (t *InterfaceType) GetFields() []Field {
+	return nil
+}
+
+// Methods to implement the Type interface for Method
+func (m *Method) GetName() string {
+	return m.Method
+}
+
+func (m *Method) GetComments() []string {
+	return nil
+}
+
+func (m *Method) GetDocuments() []string {
+	return nil
+}
+
+func (m *Method) GetFields() []Field {
 	return nil
 }

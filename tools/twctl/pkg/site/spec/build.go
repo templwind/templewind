@@ -31,7 +31,12 @@ func BuildSiteSpec(ast ast.SiteAST) *SiteSpec {
 		for _, srv := range s.Services {
 			service := NewService(srv.Name)
 			for _, h := range srv.Handlers {
-				handler := NewHandler(h.Name, h.Method, h.Route, h.RequestType, h.ResponseType, buildPage(h.Page), buildDoc(h.Doc))
+				methods := make([]Method, 0)
+				for _, m := range h.Methods {
+					methods = append(methods, NewMethod(m.Method, m.Route, m.RequestType, m.ResponseType, buildPage(m.Page), buildDoc(m.Doc)))
+				}
+
+				handler := NewHandler(h.Name, methods)
 				service.Handlers = append(service.Handlers, *handler)
 			}
 			server.Services = append(server.Services, *service)
@@ -76,7 +81,10 @@ func PrintSpec(siteSpec SiteSpec) {
 		for _, srv := range s.Services {
 			fmt.Printf("  Service: %s\n", srv.Name)
 			for _, h := range srv.Handlers {
-				fmt.Printf("    Handler: %s %s %s %s %s\n", h.Name, h.Method, h.Route, h.RequestType, h.ResponseType)
+				fmt.Printf("    Handler: %s\n", h.Name)
+				for _, m := range h.Methods {
+					fmt.Printf("        Method: %s %s %s %s\n", m.Method, m.Route, m.RequestType, m.ResponseType)
+				}
 			}
 		}
 	}

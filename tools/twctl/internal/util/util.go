@@ -119,18 +119,18 @@ func GetMiddleware(site *spec.SiteSpec) []string {
 }
 
 // getDoc formats the documentation map into a string
-func GetDoc(doc map[string]string) string {
+func GetDoc(doc map[string]interface{}) string {
 	if len(doc) == 0 {
 		return ""
 	}
 	var resp strings.Builder
 	for key, val := range doc {
-		resp.WriteString(fmt.Sprintf("// %s: %s\n", key, strings.Trim(val, "\"")))
+		resp.WriteString(fmt.Sprintf("// %s: %s\n", key, strings.Trim(val.(string), "\"")))
 	}
 	return resp.String()
 }
 
-func RequestGoTypeName(r spec.Handler, pkg ...string) string {
+func RequestGoTypeName(r spec.Method, pkg ...string) string {
 	if r.RequestType == nil {
 		return ""
 	}
@@ -138,7 +138,7 @@ func RequestGoTypeName(r spec.Handler, pkg ...string) string {
 	return GolangExpr(r.RequestType, pkg...)
 }
 
-func ResponseGoTypeName(r spec.Handler, pkg ...string) string {
+func ResponseGoTypeName(r spec.Method, pkg ...string) string {
 	if r.ResponseType == nil {
 		return ""
 	}

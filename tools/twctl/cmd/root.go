@@ -7,7 +7,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/templwind/templwind/tools/twctl/cmd/echo"
 	"github.com/templwind/templwind/tools/twctl/cmd/parsexo"
-	"github.com/templwind/templwind/tools/twctl/cmd/site"
 )
 
 var rootCmd = &cobra.Command{
@@ -22,7 +21,7 @@ var rootCmd = &cobra.Command{
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
-	rootCmd.AddCommand(site.Cmd())
+	// rootCmd.AddCommand(site.Cmd())
 	rootCmd.AddCommand(echo.Cmd())
 	rootCmd.AddCommand(parsexo.Cmd())
 

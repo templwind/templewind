@@ -29,11 +29,18 @@ func (spec *SiteSpec) Validate() error {
 				if handler.Name == "" {
 					return fmt.Errorf("handler in service %s must have a name", service.Name)
 				}
-				if handler.Method == "" {
+				if len(handler.Methods) == 0 {
 					return fmt.Errorf("handler %s in service %s must have a method", handler.Name, service.Name)
 				}
-				if handler.Route == "" {
-					return fmt.Errorf("handler %s in service %s must have a route", handler.Name, service.Name)
+				for _, method := range handler.Methods {
+
+					// b, _ := json.MarshalIndent(handler, "", "  ")
+					// fmt.Println("handler", string(b))
+
+					// fmt.Printf("METHOD: %#v", handler)
+					if method.Route == "" {
+						return fmt.Errorf("method in handler %s in service %s must have a route", handler.Name, service.Name)
+					}
 				}
 			}
 		}

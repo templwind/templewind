@@ -2,8 +2,8 @@ package echo
 
 import (
 	_ "embed"
+	"strings"
 
-	"github.com/templwind/templwind/tools/twctl/internal/util"
 	"github.com/templwind/templwind/tools/twctl/pkg/site/spec"
 )
 
@@ -11,7 +11,7 @@ import (
 var airTemplate string
 
 func genAir(dir string, site *spec.SiteSpec) error {
-	serviceName := util.ToCamel(site.Name)
+	serviceName := strings.ToLower(site.Name)
 
 	return genFile(fileGenConfig{
 		dir:             dir,

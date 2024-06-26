@@ -29,6 +29,6 @@ func main() {
 	// Register the handlers
 	handler.RegisterHandlers(server.Echo, svcCtx)
 
-	fmt.Printf("Starting server at %s:%d...\n", c.Host, c.Port)
+	fmt.Printf("Starting server at %s:%d ...\n", c.Host, c.Port)
 	server.Start()
 }

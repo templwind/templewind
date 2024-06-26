@@ -6,6 +6,7 @@ const (
 	NodeTypeServer    = "@server"
 	NodeTypeService   = "service"
 	NodeTypeHandler   = "@handler"
+	NodeTypeMethod    = "method"
 	NodeTypePage      = "@page"
 	NodeTypeDoc       = "@doc"
 	NodeTypeAttribute = "attribute"
@@ -20,7 +21,7 @@ type BaseNode struct {
 	Type     string
 	Name     string
 	Children []BaseNode
-	Attrs    map[string]string
+	Attrs    map[string]interface{}
 }
 
 // StructField represents a field in a struct.
@@ -49,7 +50,7 @@ type ServiceNode struct {
 }
 
 // HandlerNode represents a handler in a service.
-type HandlerNode struct {
+type MethodNode struct {
 	BaseNode
 	Method       string
 	Route        string
@@ -59,6 +60,12 @@ type HandlerNode struct {
 	ResponseType interface{}
 	Page         *PageNode
 	Doc          *DocNode
+}
+
+// HandlerNode represents a handler in a service with multiple method definitions.
+type HandlerNode struct {
+	BaseNode
+	Methods []MethodNode
 }
 
 // PageNode represents a page in a service.
@@ -118,12 +125,12 @@ func NewBaseNode(nodeType, name string) BaseNode {
 		Type:     nodeType,
 		Name:     name,
 		Children: []BaseNode{},
-		Attrs:    map[string]string{},
+		Attrs:    map[string]interface{}{},
 	}
 }
 
 // NewDocNode creates a new doc node.
-func NewDocNode(attrs map[string]string) *DocNode {
+func NewDocNode(attrs map[string]interface{}) *DocNode {
 	return &DocNode{
 		BaseNode: BaseNode{
 			Type:  NodeTypeDoc,
@@ -134,7 +141,7 @@ func NewDocNode(attrs map[string]string) *DocNode {
 }
 
 // NewPageNode creates a new page node.
-func NewPageNode(attrs map[string]string) *PageNode {
+func NewPageNode(attrs map[string]interface{}) *PageNode {
 	return &PageNode{
 		BaseNode: BaseNode{
 			Type:  NodeTypePage,
@@ -145,7 +152,7 @@ func NewPageNode(attrs map[string]string) *PageNode {
 }
 
 // NewServerNode creates a new server node.
-func NewServerNode(attrs map[string]string) *ServerNode {
+func NewServerNode(attrs map[string]interface{}) *ServerNode {
 	return &ServerNode{
 		BaseNode: BaseNode{
 			Type:  NodeTypeServer,
@@ -190,12 +197,35 @@ func NewMenuNode(name string) *MenuNode {
 }
 
 // NewModuleNode creates a new module node.
-func NewModuleNode(name string, attr map[string]string) *ModuleNode {
+func NewModuleNode(name interface{}, attr map[string]interface{}) *ModuleNode {
 	return &ModuleNode{
 		BaseNode: BaseNode{
 			Type:  NodeTypeModule,
-			Name:  name,
+			Name:  name.(string),
 			Attrs: attr,
 		},
+	}
+}
+
+// NewHandlerNode creates a new handler node with default empty values.
+func NewHandlerNode(name string) *HandlerNode {
+	return &HandlerNode{
+		BaseNode: BaseNode{
+			Type:     NodeTypeHandler,
+			Name:     name,
+			Children: []BaseNode{},
+			Attrs:    map[string]interface{}{},
+		},
+		Methods: []MethodNode{},
+	}
+}
+
+// NewMethodNode creates a new method node with default empty values.
+func NewMethodNode(method, route string, requestType, responseType interface{}) MethodNode {
+	return MethodNode{
+		Method:       method,
+		Route:        route,
+		RequestType:  requestType,
+		ResponseType: responseType,
 	}
 }

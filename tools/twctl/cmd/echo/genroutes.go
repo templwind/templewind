@@ -48,8 +48,7 @@ func RegisterHandlers(server *echo.Echo, svcCtx *svc.ServiceContext) {
 		"{{.prefix}}",{{if .middlewares}}
 		[]echo.MiddlewareFunc{
 			{{.middlewares}}
-		}...,
-		{{end}}
+		}...,{{end}}
 	)
 
 	{{.routes}}
@@ -86,7 +85,7 @@ type (
 		method  string
 		path    string
 		handler string
-		doc     map[string]string
+		doc     map[string]interface{}
 	}
 )
 
@@ -113,7 +112,7 @@ func genRoutes(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) err
 			routesBuilder.WriteString(fmt.Sprintf(
 				`%s.%s("%s", %s)
 	`,
-				toPrefix(g.name)+"Group",
+				util.ToCamel(g.name)+"Group",
 				mapping[strings.ToLower(r.method)],
 				r.path,
 				r.handler,
@@ -132,7 +131,7 @@ func genRoutes(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) err
 		}
 
 		if err := gt.Execute(&builder, map[string]string{
-			"groupName":   toPrefix(g.name) + "Group",
+			"groupName":   util.ToCamel(g.name) + "Group",
 			"middlewares": strings.Join(g.middlewares, "\n\t\t\t"),
 			"routes":      routesBuilder.String(),
 			"prefix":      g.prefix,
@@ -206,18 +205,29 @@ func getRoutes(site *spec.SiteSpec) ([]group, error) {
 		groupedRoutes.name = folder
 		for _, s := range server.Services {
 			for _, r := range s.Handlers {
-				handler := getHandlerName(r)
-				handler = handler + "(svcCtx)"
-				if len(folder) > 0 {
-					handler = toPrefix(folder) + "." + strings.ToUpper(handler[:1]) + handler[1:]
-				}
+				// handlerName := getHandlerName(r, nil)
+				// handlerName = handlerName + "(svcCtx)"
 
-				groupedRoutes.routes = append(groupedRoutes.routes, route{
-					method:  mapping[r.Method],
-					path:    r.Route,
-					handler: handler,
-					doc:     r.DocAnnotation.Properties,
-				})
+				for _, m := range r.Methods {
+					// fmt.Println("m", m)
+					// if m.RequestType != nil {
+					handlerName := util.ToTitle(getHandlerName(r, &m))
+					if len(folder) > 0 {
+						handlerName = toPrefix(folder) + "." + strings.ToUpper(handlerName[:1]) + handlerName[1:]
+					}
+
+					handlerName = handlerName + "(svcCtx)"
+
+					// fmt.Println("handlerName", handlerName)
+
+					groupedRoutes.routes = append(groupedRoutes.routes, route{
+						method:  mapping[strings.ToLower(m.Method)],
+						path:    m.Route,
+						handler: handlerName,
+						doc:     m.DocAnnotation.Properties,
+					})
+					// }
+				}
 			}
 		}
 

@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -70,10 +71,13 @@ func doGenProject(siteFile, dir string) error {
 
 	parsedAST := p.Parse()
 	siteSpec := spec.BuildSiteSpec(parsedAST)
-	// os.Exit(0)
 
+	// b, _ := json.MarshalIndent(siteSpec, "", "  ")
+	// fmt.Println("handler", string(b))
 	// spec.PrintSpec(*siteSpec)
 	// parser.PrintAST(parsedAST)
+
+	// os.Exit(0)
 
 	_, err = spec.SetServiceName(siteSpec)
 	if err != nil {
@@ -108,7 +112,7 @@ func doGenProject(siteFile, dir string) error {
 	logx.Must(genTypes(dir, cfg, siteSpec))
 	logx.Must(genRoutes(dir, rootPkg, cfg, siteSpec))
 	logx.Must(genHandlers(dir, rootPkg, cfg, siteSpec))
-	logx.Must(genLogic(dir, rootPkg, cfg, siteSpec))
+	logx.Must(genController(dir, rootPkg, cfg, siteSpec))
 	logx.Must(genMiddleware(dir, cfg, siteSpec))
 	logx.Must(genAir(dir, siteSpec))
 	logx.Must(genNpmFiles(dir, siteSpec))
@@ -132,10 +136,14 @@ func doGenProject(siteFile, dir string) error {
 		return fmt.Errorf("change directory to %s failed: %w", dir, err)
 	}
 
-	commands := []struct {
-		args      []string
-		condition func() bool
-	}{
+	type cmdStruct struct {
+		args        []string
+		condition   func() bool
+		asGoRoutine bool
+		delay       time.Duration
+	}
+
+	commands := []cmdStruct{
 		{
 			args: []string{"go", "mod", "tidy"},
 			condition: func() bool {
@@ -165,6 +173,14 @@ func doGenProject(siteFile, dir string) error {
 				return false
 			},
 		},
+		// {
+		// 	args: []string{"air"},
+		// 	condition: func() bool {
+		// 		return true
+		// 	},
+		// 	asGoRoutine: true,
+		// 	delay:       5 * time.Second,
+		// },
 	}
 
 	for _, command := range commands {
@@ -172,9 +188,20 @@ func doGenProject(siteFile, dir string) error {
 			cmd := exec.Command(command.args[0], command.args[1:]...)
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
-			if err := cmd.Run(); err != nil {
-				fmt.Fprintf(os.Stderr, "failed to run '%s': %v\n", strings.Join(command.args, " "), err)
-				os.Exit(1)
+			run := func(cmd *exec.Cmd, command cmdStruct) {
+				if command.delay > 0 {
+					time.Sleep(command.delay)
+				}
+				if err := cmd.Run(); err != nil {
+					fmt.Fprintf(os.Stderr, "failed to run '%s': %v\n", strings.Join(command.args, " "), err)
+					os.Exit(1)
+				}
+			}
+
+			if command.asGoRoutine {
+				go run(cmd, command)
+			} else {
+				run(cmd, command)
 			}
 		}
 	}
@@ -184,8 +211,34 @@ func doGenProject(siteFile, dir string) error {
 		return fmt.Errorf("change directory back to %s failed: %w", originalDir, err)
 	}
 
+	// Open the browser to the correct URL and port
+	// port := 8888
+	// url := fmt.Sprintf("http://localhost:%d", port)
+	// if err := openBrowser(url); err != nil {
+	// 	fmt.Fprintf(os.Stderr, "failed to open browser: %v\n", err)
+	// }
+
 	fmt.Println(color.Green.Render("Done."))
 	return nil
+}
+
+func openBrowser(url string) error {
+	var cmd string
+	var args []string
+
+	switch os := runtime.GOOS; os {
+	case "windows":
+		cmd = "rundll32"
+		args = []string{"url.dll,FileProtocolHandler", url}
+	case "darwin":
+		cmd = "open"
+		args = []string{url}
+	default: // "linux", "freebsd", "openbsd", "netbsd"
+		cmd = "xdg-open"
+		args = []string{url}
+	}
+
+	return exec.Command(cmd, args...).Start()
 }
 
 func downloadModule(module spec.Module) error {
