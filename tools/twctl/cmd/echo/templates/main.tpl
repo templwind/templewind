@@ -32,6 +32,7 @@ func main() {
 	// Add static file serving
 	server.Echo.Static("/assets", "assets")
 
+	// Start the server
 	fmt.Printf("Starting server at %s:%d ...\n", c.Host, c.Port)
 	server.Start()
 }
