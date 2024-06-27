@@ -20,10 +20,10 @@ import (
 	"github.com/zeromicro/go-zero/tools/goctl/vars"
 )
 
-//go:embed controller.tpl
+//go:embed templates/controller.tpl
 var controllerTemplate string
 
-//go:embed templ.tpl
+//go:embed templates/templ.tpl
 var templTemplate string
 
 func genController(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) error {

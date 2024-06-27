@@ -31,7 +31,7 @@ const (
 `
 )
 
-//go:embed config.tpl
+//go:embed templates/config.tpl
 var configTemplate string
 
 func genConfig(dir string, cfg *config.Config, site *spec.SiteSpec) error {

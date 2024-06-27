@@ -10,46 +10,46 @@ import (
 	"github.com/templwind/templwind/tools/twctl/pkg/site/spec"
 )
 
-//go:embed readme.tpl
+//go:embed templates/readme.tpl
 var readmeTemplate string
 
-//go:embed package.tpl
+//go:embed templates/package.tpl
 var packageTemplate string
 
-//go:embed postcss.tpl
+//go:embed templates/postcss.tpl
 var postcssConfigTemplate string
 
-//go:embed tailwind.tpl
+//go:embed templates/tailwind.tpl
 var tailwindConfigTemplate string
 
-//go:embed tsconfig.tpl
+//go:embed templates/tsconfig.tpl
 var tsconfigTemplate string
 
-//go:embed vite.tpl
+//go:embed templates/vite.tpl
 var viteConfigTemplate string
 
-//go:embed vite-env.tpl
+//go:embed templates/vite-env.tpl
 var viteEnvTemplate string
 
-//go:embed styles.tpl
+//go:embed templates/styles.tpl
 var stylesTemplate string
 
-//go:embed main.ts.tpl
+//go:embed templates/main.ts.tpl
 var mainTsTemplate string
 
-//go:embed error.ts.tpl
+//go:embed templates/error.ts.tpl
 var errorTsTemplate string
 
-//go:embed gitignore.tpl
+//go:embed templates/gitignore.tpl
 var gitignoreTemplate string
 
-//go:embed schema.sql
+//go:embed templates/schema.sql
 var schemaTemplate string
 
-//go:embed local.env.tpl
+//go:embed templates/local.env.tpl
 var localEnvTemplate string
 
-//go:embed makefile.tpl
+//go:embed templates/makefile.tpl
 var makefileTemplate string
 
 var (

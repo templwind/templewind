@@ -13,7 +13,7 @@ import (
 	"github.com/zeromicro/go-zero/tools/goctl/util/pathx"
 )
 
-//go:embed main.tpl
+//go:embed templates/main.tpl
 var mainTemplate string
 
 func genMain(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) error {

@@ -7,7 +7,7 @@ import (
 	"github.com/templwind/templwind/tools/twctl/pkg/site/spec"
 )
 
-//go:embed air.tpl
+//go:embed templates/air.tpl
 var airTemplate string
 
 func genAir(dir string, site *spec.SiteSpec) error {

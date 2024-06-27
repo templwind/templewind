@@ -23,7 +23,7 @@ const (
 `
 )
 
-//go:embed etc.tpl
+//go:embed templates/etc.tpl
 var etcTemplate string
 
 func genEtc(dir string, cfg *config.Config, site *spec.SiteSpec) error {

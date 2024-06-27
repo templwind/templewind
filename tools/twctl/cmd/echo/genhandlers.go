@@ -18,7 +18,7 @@ import (
 
 const defaultControllerPackage = "controller"
 
-//go:embed handler.tpl
+//go:embed templates/handler.tpl
 var handlerTemplate string
 
 func genHandlers(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) error {

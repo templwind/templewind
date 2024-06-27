@@ -19,7 +19,7 @@ import (
 
 const typesFile = "types"
 
-//go:embed types.tpl
+//go:embed templates/types.tpl
 var typesTemplate string
 
 // BuildTypes gen types to string
