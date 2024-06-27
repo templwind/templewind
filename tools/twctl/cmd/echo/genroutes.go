@@ -43,6 +43,7 @@ func RegisterHandlers(server *echo.Echo, svcCtx *svc.ServiceContext) {
 	{{.routesAdditions}}
 }
 `
+
 	routesAdditionTemplate = `
 	{{.groupName}} := server.Group(
 		"{{.prefix}}",{{if .middlewares}}
@@ -57,6 +58,7 @@ func RegisterHandlers(server *echo.Echo, svcCtx *svc.ServiceContext) {
 )
 
 var mapping = map[string]string{
+	"static":  "STATIC",
 	"delete":  "DELETE",
 	"get":     "GET",
 	"head":    "HEAD",

@@ -29,6 +29,9 @@ func main() {
 	// Register the handlers
 	handler.RegisterHandlers(server.Echo, svcCtx)
 
+	// Add static file serving
+	server.Echo.Static("/assets", "assets")
+
 	fmt.Printf("Starting server at %s:%d ...\n", c.Host, c.Port)
 	server.Start()
 }
