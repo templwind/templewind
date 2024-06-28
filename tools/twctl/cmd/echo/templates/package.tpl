@@ -10,8 +10,10 @@
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@tailwindcss/typography": "^0.5.13",
     "autoprefixer": "^10.4.19",
-    "htmx.org": "^1.9.12",
+    "daisyui": "^4.12.10",
+    "htmx.org": "^2.0.0",
     "postcss": "^8.4.38",
     "sass": "^1.77.4",
     "tailwindcss": "^3.4.4",

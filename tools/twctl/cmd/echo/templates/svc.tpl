@@ -5,12 +5,12 @@ import (
 )
 
 type ServiceContext struct {
-	Config {{.config}}
+	Config *{{.config}}
 	DB         *sqlx.DB
 	{{.middleware}}
 }
 
-func NewServiceContext(c {{.config}}) *ServiceContext {
+func NewServiceContext(c *{{.config}}) *ServiceContext {
 	return &ServiceContext{
 		Config: c,
 		DB: db.MustConnect(

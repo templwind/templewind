@@ -1,11 +1,7 @@
-package sitelayout
+package {{.PkgName}}
 
 import (
-	"net/http"
-
-	"github.com/a-h/templ"
-	"github.com/templwind/sass-starter/internal/config"
-	"github.com/templwind/templwind"
+	{{.Imports}}
 )
 
 // Props defines the options for the AppBar component
@@ -17,12 +13,12 @@ type Props struct {
 
 // New creates a new component
 func New(opts ...templwind.OptFunc[Props]) templ.Component {
-	return templwind.New(defaultProps, tpl, opts...)
+	return templwind.New(defaultProps, layout, opts...)
 }
 
 // NewWithProps creates a new component with the given options
 func NewWithProps(opt *Props) templ.Component {
-	return templwind.NewWithProps(tpl, opt)
+	return templwind.NewWithProps(layout, opt)
 }
 
 // WithProps builds the options with the given options

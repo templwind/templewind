@@ -13,11 +13,11 @@ const (
 	etcTemplateFile             = "templates/etc.tpl"
 	handlerTemplateFile         = "templates/handler.tpl"
 	controllerTemplateFile      = "templates/controller.tpl"
+	controllerTemplTemplateFile = "templates/controller.templ.tpl"
 	mainTemplateFile            = "templates/main.tpl"
 	middlewareImplementCodeFile = "templates/middleware.tpl"
 	routesTemplateFile          = "templates/routes.tpl"
 	routesAdditionTemplateFile  = "templates/route-addition.tpl"
-	templTemplateFile           = "templates/templ.tpl"
 	typesTemplateFile           = "templates/types.tpl"
 	airTemplateFile             = "templates/air.tpl"
 	packageTemplateFile         = "templates/package.tpl"
@@ -34,6 +34,9 @@ const (
 	schemaTemplateFile          = "templates/1_schema.tpl"
 	localEnvTemplateFile        = "templates/local.env.tpl"
 	makefileTemplateFile        = "templates/makefile.tpl"
+	layoutTemplateFile          = "templates/layout.tpl"
+	layoutTemplTemplateFile     = "templates/layout.templ.tpl"
+	propsTemplateFile           = "templates/props.tpl"
 )
 
 var templates = map[string]string{
@@ -46,7 +49,7 @@ var templates = map[string]string{
 	middlewareImplementCodeFile: middlewareImplementCode,
 	routesTemplateFile:          routesTemplate,
 	routesAdditionTemplateFile:  routesAdditionTemplate,
-	templTemplateFile:           templTemplate,
+	controllerTemplTemplateFile: controllerTemplTemplate,
 	typesTemplateFile:           typesTemplate,
 	airTemplateFile:             airTemplate,
 	packageTemplateFile:         packageTemplate,
@@ -63,6 +66,9 @@ var templates = map[string]string{
 	schemaTemplateFile:          schemaTemplate,
 	localEnvTemplateFile:        localEnvTemplate,
 	makefileTemplateFile:        makefileTemplate,
+	layoutTemplateFile:          layoutTemplate,
+	layoutTemplTemplateFile:     layoutTemplTemplate,
+	propsTemplateFile:           propsTemplate,
 }
 
 // Category returns the category of the api files.

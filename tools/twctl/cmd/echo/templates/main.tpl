@@ -17,7 +17,7 @@ func main() {
 	conf.MustLoad(*configFile, &c, conf.UseEnv())
 
 	// Create a new service context
-	svcCtx := svc.NewServiceContext(c)
+	svcCtx := svc.NewServiceContext(&c)
 
 	// Create a new server
 	server := webserver.MustNewServer(

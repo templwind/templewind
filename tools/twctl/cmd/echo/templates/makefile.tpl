@@ -22,6 +22,7 @@ AWS_ECR_REPO=${NAMESPACE}/${EXECUTABLE}
 AWS_ECR_TAG=latest
 AWS_ECR_URL=$(AWS_ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(AWS_ECR_REPO)
 AWS_LOGIN=$(shell aws ecr get-login-password --region $(AWS_REGION))
+DSN ?= $(shell echo $(DSN) | sed 's|sqlite://||')
 
 # XO includes (parsed from .env)
 XO_INCLUDES := $(shell echo "${XO_INCLUDES}" | xargs | sed -e 's/ /\ --include=/g')

@@ -10,6 +10,7 @@ const (
 	ViewDir       = Internal + "views"
 	MiddlewareDir = Internal + "middleware"
 	UtilsDir      = Internal + "utils"
+	LayoutsDir    = Internal + "ui/layouts"
 	TypesDir      = Internal + TypesPacket
 	GroupProperty = "group"
 	JwtTransKey   = "jwtTransition"

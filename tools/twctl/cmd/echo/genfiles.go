@@ -181,7 +181,7 @@ func genNpmFiles(dir string, site *spec.SiteSpec) error {
 			templateFile:    makefileTemplateFile,
 			builtinTemplate: makefileTemplate,
 			data: map[string]string{
-				"serviceName": filename,
+				"serviceName": strings.ToLower(filename),
 			},
 		},
 	}

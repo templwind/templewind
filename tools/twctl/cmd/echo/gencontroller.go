@@ -23,8 +23,11 @@ import (
 //go:embed templates/controller.tpl
 var controllerTemplate string
 
-//go:embed templates/templ.tpl
-var templTemplate string
+//go:embed templates/controller.templ.tpl
+var controllerTemplTemplate string
+
+//go:embed templates/props.tpl
+var propsTemplate string
 
 func genController(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) error {
 	for _, server := range site.Servers {
@@ -118,6 +121,8 @@ func (l *{{.ControllerType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
 
 func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, handler spec.Handler) error {
 
+	controllerLayout := server.GetAnnotation("template")
+
 	subDir := getControllerFolderPath(server, handler)
 	filename := path.Join(dir, subDir, strings.ToLower(handler.Name)+".go")
 	fmt.Println("filename::", filename)
@@ -131,6 +136,14 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 	methods := []ControllerMethodConfig{}
 	for _, method := range handler.Methods {
 
+		if method.Page != nil {
+			if key, ok := method.Page.Annotation.Properties["template"]; ok {
+				if layoutName, ok := key.(string); ok {
+					controllerLayout = layoutName
+				}
+			}
+		}
+
 		var responseString string
 		var returnString string
 		var requestString string
@@ -140,15 +153,12 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 			returnString = "return"
 		} else {
 			responseString = "error"
-			returnString = fmt.Sprintf("return templwind.Render(c, http.StatusOK, %s(c, l.svcCtx))", strings.Title(handler.Name)+"View")
+			returnString = fmt.Sprintf(`return templwind.Render(c, http.StatusOK, New(
+				WithConfig(l.svcCtx.Config),
+				WithRequest(c.Request()),
+				WithTitle("%s"),
+			))`, util.ToCamel(handler.Name+"View"))
 		}
-
-		// if err := utils.Render(w, r, 200, New(
-		// 	WithConfig(c.svcCtx.Config),
-		// 	WithRequest(r),
-		// )); err != nil {
-		// 	http.Error(w, err.Error(), http.StatusInternalServerError)
-		// }
 
 		if method.RequestType != nil && len(method.RequestType.GetName()) > 0 {
 			requestString = "req *" + util.RequestGoTypeName(method, types.TypesPacket)
@@ -161,10 +171,6 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		if hasReq {
 			requestType = util.ToTitle(method.RequestType.GetName())
 		}
-		// responseType := ""
-		// if hasResp {
-		// 	responseType = util.ToTitle(method.ResponseType.GetName())
-		// }
 
 		handlerName := util.ToTitle(getHandlerName(handler, &method))
 
@@ -211,26 +217,49 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 			strings.ToLower(handler.Name)+".go")
 	}
 
-	templImports := genTemplImports(rootPkg)
+	templImports := genTemplImports(rootPkg, strings.ToLower(util.ToCamel(controllerLayout+"Layout")))
 
-	fmt.Println("templImports", templImports)
+	// fmt.Println("templImports", templImports)
 	// templ file first
-	genFile(fileGenConfig{
+	if err := genFile(fileGenConfig{
 		dir:             dir,
 		subdir:          subDir,
 		filename:        strings.ToLower(handler.Name) + ".templ",
-		templateName:    "templTemplate",
+		templateName:    "controllerTemplTemplate",
 		category:        category,
-		templateFile:    templTemplateFile,
-		builtinTemplate: templTemplate,
+		templateFile:    controllerTemplTemplateFile,
+		builtinTemplate: controllerTemplTemplate,
 		data: map[string]any{
-			"pkgName":      subDir[strings.LastIndex(subDir, "/")+1:],
-			"templImports": templImports,
-			"templName":    strings.Title(handler.Name) + "View",
+			"pkgName":          subDir[strings.LastIndex(subDir, "/")+1:],
+			"templImports":     templImports,
+			"templName":        util.ToCamel(handler.Name + "View"),
+			"controllerLayout": strings.ToLower(util.ToCamel(controllerLayout + "Layout")),
 		},
-	})
-	controllerType := strings.Title(getControllerName(handler))
+	}); err != nil {
+		return err
+	}
+
+	propsImports := genPropsImports(rootPkg)
+
+	if err := genFile(fileGenConfig{
+		dir:             dir,
+		subdir:          subDir,
+		filename:        "props.go",
+		templateName:    "controllerPropsTemplate",
+		category:        category,
+		templateFile:    propsTemplateFile,
+		builtinTemplate: propsTemplate,
+		data: map[string]any{
+			"pkgName":   subDir[strings.LastIndex(subDir, "/")+1:],
+			"Imports":   propsImports,
+			"templName": util.ToCamel(handler.Name + "View"),
+		},
+	}); err != nil {
+		return err
+	}
+
 	imports := genControllerImports(handler, rootPkg)
+	controllerType := strings.Title(getControllerName(handler))
 
 	err := genFile(fileGenConfig{
 		dir:             dir,
@@ -263,11 +292,20 @@ func getControllerFolderPath(server spec.Server, handler spec.Handler) string {
 	return path.Join(types.ControllerDir, folder, strings.ToLower(handler.Name))
 }
 
-func genTemplImports(parentPkg string) string {
-	var imports []string
-	// imports = append(imports, `"net/http"`+"\n")
-	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
-	imports = append(imports, "\n\t\"github.com/labstack/echo/v4\"")
+func genTemplImports(parentPkg, fileName string) string {
+	imports := []string{
+		fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.LayoutsDir, fileName)),
+	}
+	return strings.Join(imports, "\n\t")
+}
+
+func genPropsImports(parentPkg string) string {
+	imports := []string{
+		fmt.Sprintf("\"%s\"\n", "net/http"),
+		fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ConfigDir)),
+		fmt.Sprintf("\"%s\"\n", "github.com/a-h/templ"),
+		fmt.Sprintf("\"%s\"", "github.com/templwind/templwind"),
+	}
 	return strings.Join(imports, "\n\t")
 }
 

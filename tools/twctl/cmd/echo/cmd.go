@@ -113,6 +113,7 @@ func doGenProject(siteFile, dir string) error {
 	logx.Must(genRoutes(dir, rootPkg, cfg, siteSpec))
 	logx.Must(genHandlers(dir, rootPkg, cfg, siteSpec))
 	logx.Must(genController(dir, rootPkg, cfg, siteSpec))
+	logx.Must(genLayout(dir, rootPkg, cfg, siteSpec))
 	logx.Must(genMiddleware(dir, cfg, siteSpec))
 	logx.Must(genAir(dir, siteSpec))
 	logx.Must(genNpmFiles(dir, siteSpec))
@@ -176,10 +177,11 @@ func doGenProject(siteFile, dir string) error {
 		// {
 		// 	args: []string{"air"},
 		// 	condition: func() bool {
+		// 		// runCmd(exec.Command("make", "xo"))
 		// 		return true
 		// 	},
 		// 	asGoRoutine: true,
-		// 	delay:       5 * time.Second,
+		// 	delay:       10 * time.Second,
 		// },
 	}
 
@@ -220,6 +222,12 @@ func doGenProject(siteFile, dir string) error {
 
 	fmt.Println(color.Green.Render("Done."))
 	return nil
+}
+
+func runCmd(cmd *exec.Cmd) error {
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 func openBrowser(url string) error {
