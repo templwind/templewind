@@ -57,6 +57,7 @@ type (
 		HandlerDoc     Doc
 		HandlerComment Doc
 		DocAnnotation  Annotation
+		ReturnsPartial bool
 	}
 
 	// Handler describes a Site handler
@@ -184,7 +185,7 @@ func NewHandler(name string, methods []Method) *Handler {
 }
 
 // NewMethod creates a new method for a handler.
-func NewMethod(method, route string, requestType, responseType interface{}, page *Page, doc *DocNode) Method {
+func NewMethod(method, route string, requestType, responseType interface{}, page *Page, doc *DocNode, returnsPartial bool) Method {
 	var (
 		reqType Type
 		resType Type
@@ -204,9 +205,10 @@ func NewMethod(method, route string, requestType, responseType interface{}, page
 		// Request:      request,
 		RequestType: reqType,
 		// Response:     response,
-		ResponseType: resType,
-		Page:         page,
-		Doc:          doc,
+		ResponseType:   resType,
+		Page:           page,
+		Doc:            doc,
+		ReturnsPartial: returnsPartial,
 	}
 }
 

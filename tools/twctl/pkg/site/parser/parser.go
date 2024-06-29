@@ -210,6 +210,16 @@ func (p *Parser) parseMethod(method *ast.MethodNode) {
 		method.RequestType = spec.NewStructType(method.Request, nil, nil, nil)
 	}
 	if len(parts) > 2 {
+		// is this an partial (HTML) response or a json response?
+		// json has a response type wrapped in parens ()
+		// ssr is a string literal word "partial"
+
+		if strings.EqualFold(parts[2], "partial") {
+			method.ReturnsPartial = true
+			// fmt.Println("PARTS", parts[2])
+			return
+		}
+		// it's a json response
 		method.Response = parts[2][1 : len(parts[2])-1]
 		method.ResponseType = spec.NewStructType(method.Response, nil, nil, nil)
 	}

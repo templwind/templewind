@@ -73,7 +73,7 @@ func doGenProject(siteFile, dir string) error {
 	siteSpec := spec.BuildSiteSpec(parsedAST)
 
 	// b, _ := json.MarshalIndent(siteSpec, "", "  ")
-	// fmt.Println("handler", string(b))
+	// fmt.Println("siteSpec", string(b))
 	// spec.PrintSpec(*siteSpec)
 	// parser.PrintAST(parsedAST)
 

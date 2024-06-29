@@ -100,7 +100,7 @@ func addMissingMethods(methods []ControllerMethodConfig, dir, subDir, fileName s
 func generateMethodDefinition(method ControllerMethodConfig) string {
 	tmpl := `{{if .HasDoc}}{{.Doc}}{{end}}
 func (l *{{.ControllerType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
-	// todo: add your controller here and delete this line
+	// todo: add your logic here and delete this line
 
 	{{.ReturnString}}
 }
@@ -152,12 +152,12 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 			responseString = "(resp " + resp + ", err error)"
 			returnString = "return"
 		} else {
-			responseString = "error"
-			returnString = fmt.Sprintf(`return templwind.Render(c, http.StatusOK, New(
+			responseString = "(templ.Component, error)"
+			returnString = fmt.Sprintf(`return New(
 				WithConfig(l.svcCtx.Config),
 				WithRequest(c.Request()),
 				WithTitle("%s"),
-			))`, util.ToCamel(handler.Name+"View"))
+			), nil`, util.ToTitle(handler.Name))
 		}
 
 		if method.RequestType != nil && len(method.RequestType.GetName()) > 0 {
@@ -230,10 +230,11 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		templateFile:    controllerTemplTemplateFile,
 		builtinTemplate: controllerTemplTemplate,
 		data: map[string]any{
-			"pkgName":          subDir[strings.LastIndex(subDir, "/")+1:],
-			"templImports":     templImports,
-			"templName":        util.ToCamel(handler.Name + "View"),
-			"controllerLayout": strings.ToLower(util.ToCamel(controllerLayout + "Layout")),
+			"pkgName":      subDir[strings.LastIndex(subDir, "/")+1:],
+			"templImports": templImports,
+			"templName":    util.ToCamel(handler.Name + "View"),
+			"pageTitle":    util.ToTitle(handler.Name),
+			// "controllerLayout": strings.ToLower(util.ToCamel(controllerLayout + "Layout")),
 		},
 	}); err != nil {
 		return err
@@ -294,7 +295,7 @@ func getControllerFolderPath(server spec.Server, handler spec.Handler) string {
 
 func genTemplImports(parentPkg, fileName string) string {
 	imports := []string{
-		fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.LayoutsDir, fileName)),
+		// fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.LayoutsDir, fileName)),
 	}
 	return strings.Join(imports, "\n\t")
 }
@@ -316,7 +317,7 @@ func genControllerImports(handler spec.Handler, parentPkg string) string {
 	hasType := false
 	for _, method := range handler.Methods {
 		// show when the response type is empty
-		if method.ResponseType == nil {
+		if method.ResponseType == nil || method.ReturnsPartial {
 			requireTemplwind = true
 		}
 
@@ -325,23 +326,22 @@ func genControllerImports(handler spec.Handler, parentPkg string) string {
 		}
 	}
 
-	imports = append(imports, `"context"`)
-	if requireTemplwind {
-		imports = append(imports, `"net/http"`+"\n")
-	} else {
-		imports = append(imports, "\n")
-	}
+	imports = append(imports, fmt.Sprintf("\"%s\"\n\n", "context"))
 	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
 
 	if hasType {
-		imports = append(imports, fmt.Sprintf("\"%s\"\n", pathx.JoinPackages(parentPkg, types.TypesDir)))
+		imports = append(imports, fmt.Sprintf("\"%s\"\n\n", pathx.JoinPackages(parentPkg, types.TypesDir)))
 	}
-	imports = append(imports, "\n\n\"github.com/labstack/echo/v4\"")
-	// TODO: method fix
 
 	if requireTemplwind {
-		imports = append(imports, "\"github.com/templwind/templwind\"")
+		imports = append(imports, fmt.Sprintf("\n\n\"%s\"", "github.com/a-h/templ"))
 	}
+	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/labstack/echo/v4"))
+	// TODO: method fix
+
+	// if requireTemplwind {
+	// 	imports = append(imports, "\"github.com/templwind/templwind\"")
+	// }
 	imports = append(imports, fmt.Sprintf("\"%s/core/logx\"", vars.ProjectOpenSourceURL))
 	return strings.Join(imports, "\n\t")
 }

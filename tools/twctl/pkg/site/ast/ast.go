@@ -52,14 +52,15 @@ type ServiceNode struct {
 // HandlerNode represents a handler in a service.
 type MethodNode struct {
 	BaseNode
-	Method       string
-	Route        string
-	Request      string
-	RequestType  interface{}
-	Response     string
-	ResponseType interface{}
-	Page         *PageNode
-	Doc          *DocNode
+	Method         string
+	Route          string
+	Request        string
+	RequestType    interface{}
+	Response       string
+	ResponseType   interface{}
+	Page           *PageNode
+	Doc            *DocNode
+	ReturnsPartial bool
 }
 
 // HandlerNode represents a handler in a service with multiple method definitions.

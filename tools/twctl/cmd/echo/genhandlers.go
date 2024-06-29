@@ -16,8 +16,6 @@ import (
 	"github.com/zeromicro/go-zero/tools/goctl/util/pathx"
 )
 
-const defaultControllerPackage = "controller"
-
 //go:embed templates/handler.tpl
 var handlerTemplate string
 
@@ -49,6 +47,8 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 
 	// fmt.Println("controllerName:", controllerName, handler.Name)
 	// fmt.Println("handlerPath:", filepath.Join(handlerPath, util.ToKebab(handler.Name)))
+
+	// fmt.Println("server", server)
 	// os.Exit(0)
 
 	filename, err := format.FileNamingFormat(cfg.NamingFormat, handlerName)
@@ -124,6 +124,13 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 }
 
 func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg string) string {
+	theme := server.GetAnnotation("theme")
+	if len(theme) == 0 {
+		theme = "themes/templwind"
+	} else {
+		theme = "themes/" + theme
+	}
+
 	hasTypes := false
 	for _, method := range handler.Methods {
 		if method.RequestType != nil && len(method.RequestType.GetName()) > 0 {
@@ -132,18 +139,45 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 		}
 	}
 
-	imports := []string{
-		fmt.Sprintf("\"%s\"\n\n", "net/http"),
-		fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, getControllerFolderPath(server, handler))),
-		fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)),
+	hasView := false
+	for _, method := range handler.Methods {
+		if method.Method == "GET" || method.ReturnsPartial {
+			hasView = true
+			break
+		}
 	}
+
+	imports := []string{
+		fmt.Sprintf("\"%s\"", "net/http"),
+	}
+
+	if hasView {
+		imports = append(imports, fmt.Sprintf("\"%s\"", "strconv"))
+		imports = append(imports, fmt.Sprintf("\"%s\"", "time"))
+	}
+
+	imports = append(imports, fmt.Sprintf("\n\n\"%s\"", pathx.JoinPackages(parentPkg, getControllerFolderPath(server, handler))))
+	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
+
 	if hasTypes {
 		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.TypesDir)))
+	}
+
+	if hasView {
+		imports = append(imports, fmt.Sprintf("\n\nbaseof \"%s\"", pathx.JoinPackages(parentPkg, theme, "layouts/baseof")))
+		imports = append(imports, fmt.Sprintf("error500 \"%s\"", pathx.JoinPackages(parentPkg, theme, "error500")))
+		imports = append(imports, fmt.Sprintf("footer \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "footer")))
+		imports = append(imports, fmt.Sprintf("head \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "head")))
+		imports = append(imports, fmt.Sprintf("header \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "header")))
 	}
 
 	imports = append(imports, fmt.Sprintf("\n\n\"%s\"", "github.com/labstack/echo/v4"))
 	if hasTypes {
 		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/zeromicro/go-zero/rest/httpx"))
+	}
+
+	if hasView {
+		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind"))
 	}
 
 	return strings.Join(imports, "\n\t")

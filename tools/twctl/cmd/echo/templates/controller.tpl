@@ -21,7 +21,7 @@ func New{{.controllerType}}(ctx context.Context, svcCtx *svc.ServiceContext) *{{
 {{- range .methods}}
 {{if .HasDoc}}{{.Doc}}{{end}}
 func (l *{{.ControllerType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
-	// todo: add your controller here and delete this line
+	// todo: add your logic here and delete this line
 
 	{{.ReturnString}}
 }

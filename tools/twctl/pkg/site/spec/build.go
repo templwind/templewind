@@ -33,7 +33,7 @@ func BuildSiteSpec(ast ast.SiteAST) *SiteSpec {
 			for _, h := range srv.Handlers {
 				methods := make([]Method, 0)
 				for _, m := range h.Methods {
-					methods = append(methods, NewMethod(m.Method, m.Route, m.RequestType, m.ResponseType, buildPage(m.Page), buildDoc(m.Doc)))
+					methods = append(methods, NewMethod(m.Method, m.Route, m.RequestType, m.ResponseType, buildPage(m.Page), buildDoc(m.Doc), m.ReturnsPartial))
 				}
 
 				handler := NewHandler(h.Name, methods)
