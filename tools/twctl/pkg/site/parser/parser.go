@@ -132,7 +132,9 @@ func (p *Parser) parseHandler() ast.HandlerNode {
 
 	activeMethod := ast.MethodNode{}
 	methods := []ast.MethodNode{}
-	for p.curToken.Type == lexer.AT_PAGE ||
+	for p.curToken.Type == lexer.AT_GET_STATIC_METHOD ||
+		p.curToken.Type == lexer.AT_GET_SOCKET_METHOD ||
+		p.curToken.Type == lexer.AT_PAGE ||
 		p.curToken.Type == lexer.AT_DOC ||
 		p.curToken.Type == lexer.AT_GET_METHOD ||
 		p.curToken.Type == lexer.AT_POST_METHOD ||
@@ -148,7 +150,9 @@ func (p *Parser) parseHandler() ast.HandlerNode {
 			// fmt.Println("DOC", p.curToken.Literal, p.curToken.Type)
 			activeMethod.Doc = p.parseDoc()
 			continue
-		} else if p.curToken.Type == lexer.AT_GET_METHOD ||
+		} else if p.curToken.Type == lexer.AT_GET_STATIC_METHOD ||
+			p.curToken.Type == lexer.AT_GET_SOCKET_METHOD ||
+			p.curToken.Type == lexer.AT_GET_METHOD ||
 			p.curToken.Type == lexer.AT_POST_METHOD ||
 			p.curToken.Type == lexer.AT_PUT_METHOD ||
 			p.curToken.Type == lexer.AT_DELETE_METHOD ||
@@ -158,6 +162,8 @@ func (p *Parser) parseHandler() ast.HandlerNode {
 			methods = append(methods, activeMethod)
 			activeMethod = ast.MethodNode{}
 		}
+
+		// fmt.Printf("METHODS %v\n", methods)
 
 		// methods = append(methods, p.parseMethod())
 
@@ -173,6 +179,12 @@ func (p *Parser) parseHandler() ast.HandlerNode {
 
 func (p *Parser) parseMethod(method *ast.MethodNode) {
 	switch p.curToken.Type {
+	case lexer.AT_GET_STATIC_METHOD:
+		method.Method = "GET"
+		method.IsStatic = true
+	case lexer.AT_GET_SOCKET_METHOD:
+		method.Method = "GET"
+		method.IsSocket = true
 	case lexer.AT_GET_METHOD:
 		method.Method = "GET"
 	case lexer.AT_POST_METHOD:
@@ -201,14 +213,31 @@ func (p *Parser) parseMethod(method *ast.MethodNode) {
 
 	method.BaseNode = ast.NewBaseNode(ast.NodeTypeMethod, method.Method)
 	method.Route = parts[0]
-	if len(parts) < 2 {
+
+	if method.IsStatic {
+		return
+	}
+
+	if method.IsSocket {
+		if method.IsSocket {
+			p.parseSocketMethod(method)
+		}
+
 		return
 	}
 
 	if len(parts) > 1 {
 		method.Request = parts[1][1 : len(parts[1])-1]
-		method.RequestType = spec.NewStructType(method.Request, nil, nil, nil)
+		// method.RequestType = spec.NewStructType(method.Request, nil, nil, nil)
+		if strings.Contains(method.Request, "[]") {
+			method.RequestType = spec.NewArrayType(
+				spec.NewStructType(strings.TrimSpace(strings.Replace(method.Request, "[]", "", -1)), nil, nil, nil),
+			)
+		} else {
+			method.RequestType = spec.NewStructType(strings.TrimSpace(strings.Replace(method.Request, "[]", "", -1)), nil, nil, nil)
+		}
 	}
+
 	if len(parts) > 2 {
 		// is this an partial (HTML) response or a json response?
 		// json has a response type wrapped in parens ()
@@ -221,8 +250,80 @@ func (p *Parser) parseMethod(method *ast.MethodNode) {
 		}
 		// it's a json response
 		method.Response = parts[2][1 : len(parts[2])-1]
-		method.ResponseType = spec.NewStructType(method.Response, nil, nil, nil)
+		if strings.Contains(method.Response, "[]") {
+			method.ResponseType = spec.NewArrayType(
+				spec.NewStructType(strings.TrimSpace(strings.Replace(method.Response, "[]", "", -1)), nil, nil, nil),
+			)
+		} else {
+			method.ResponseType = spec.NewStructType(strings.TrimSpace(strings.Replace(method.Response, "[]", "", -1)), nil, nil, nil)
+		}
 	}
+}
+
+func (p *Parser) parseSocketMethod(method *ast.MethodNode) {
+	topics := []ast.TopicNode{}
+
+	p.nextToken()
+	for p.curToken.Type != lexer.CLOSE_PAREN {
+		// Split the line into parts by spaces
+		literal := p.curToken.Literal
+		literal = strings.ReplaceAll(literal, "(", " (")
+		re := regexp.MustCompile(`\s+`)
+		literal = re.ReplaceAllString(literal, " ")
+
+		// split into sections
+		isClientInitiated := strings.Contains(literal, ">>")
+		// replace the >> and << with \u00A7
+		literal = strings.ReplaceAll(literal, "<<", "\u00A7")
+		literal = strings.ReplaceAll(literal, ">>", "\u00A7")
+
+		sections := strings.Split(literal, "\u00A7")
+
+		var (
+			topic        string
+			requestType  interface{}
+			responseType interface{}
+		)
+
+		requestParts := strings.Split(strings.TrimSpace(sections[0]), " ")
+		if len(requestParts) > 0 {
+			topic = strings.TrimSpace(requestParts[0])
+		}
+		if len(requestParts) > 1 {
+			rType := strings.Replace(requestParts[1], "(", "", -1)
+			rType = strings.Replace(rType, ")", "", -1)
+			if strings.Contains(rType, "[]") {
+				rType = strings.Replace(rType, "[]", "", -1)
+				requestType = spec.NewArrayType(
+					spec.NewStructType(strings.TrimSpace(rType), nil, nil, nil),
+				)
+			} else {
+				requestType = spec.NewStructType(strings.TrimSpace(rType), nil, nil, nil)
+			}
+		}
+
+		responseParts := strings.Split(strings.TrimSpace(sections[1]), " ")
+		// fmt.Println("RESPONSE PARTS", responseParts)
+		if len(responseParts) > 0 {
+			rType := strings.Replace(responseParts[0], "(", "", -1)
+			rType = strings.Replace(rType, ")", "", -1)
+			if strings.Contains(rType, "[]") {
+				rType = strings.Replace(rType, "[]", "", -1)
+				responseType = spec.NewArrayType(
+					spec.NewStructType(strings.TrimSpace(rType), nil, nil, nil),
+				)
+			} else {
+				responseType = spec.NewStructType(strings.TrimSpace(rType), nil, nil, nil)
+			}
+		}
+
+		topics = append(topics, ast.NewTopicNode(topic, requestType, responseType, isClientInitiated))
+
+		p.nextToken()
+	}
+
+	// add the topics to the method
+	method.SocketNode = ast.NewSocketNode(method.Method, method.Route, topics)
 }
 
 func (p *Parser) parsePage() *ast.PageNode {

@@ -84,10 +84,13 @@ type (
 		maxBytes         string
 	}
 	route struct {
-		method  string
-		path    string
-		handler string
-		doc     map[string]interface{}
+		method   string
+		path     string
+		handler  string
+		doc      map[string]interface{}
+		isStatic bool
+		isSocket bool
+		topics   []spec.TopicNode
 	}
 )
 
@@ -111,14 +114,24 @@ func genRoutes(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) err
 			if len(r.doc) > 0 {
 				routesBuilder.WriteString(fmt.Sprintf("\n%s\n", util.GetDoc(r.doc)))
 			}
-			routesBuilder.WriteString(fmt.Sprintf(
-				`%s.%s("%s", %s)
+			if r.isStatic {
+				routesBuilder.WriteString(fmt.Sprintf(
+					`%s.Static("%s", "%s")
 	`,
-				util.ToCamel(g.name)+"Group",
-				mapping[strings.ToLower(r.method)],
-				r.path,
-				r.handler,
-			))
+					util.ToCamel(g.name)+"Group",
+					r.path,
+					"public"+r.path,
+				))
+			} else {
+				routesBuilder.WriteString(fmt.Sprintf(
+					`%s.%s("%s", %s)
+	`,
+					util.ToCamel(g.name)+"Group",
+					mapping[strings.ToLower(r.method)],
+					r.path,
+					r.handler,
+				))
+			}
 		}
 
 		for i, _ := range g.middlewares {
@@ -220,14 +233,21 @@ func getRoutes(site *spec.SiteSpec) ([]group, error) {
 
 					handlerName = handlerName + "(svcCtx)"
 
+					routeObj := route{
+						method:   mapping[strings.ToLower(m.Method)],
+						path:     m.Route,
+						handler:  handlerName,
+						doc:      m.DocAnnotation.Properties,
+						isStatic: m.IsStatic,
+						isSocket: m.IsSocket,
+					}
+
+					if m.IsSocket && m.SocketNode != nil {
+						routeObj.topics = m.SocketNode.Topics
+					}
 					// fmt.Println("handlerName", handlerName)
 
-					groupedRoutes.routes = append(groupedRoutes.routes, route{
-						method:  mapping[strings.ToLower(m.Method)],
-						path:    m.Route,
-						handler: handlerName,
-						doc:     m.DocAnnotation.Properties,
-					})
+					groupedRoutes.routes = append(groupedRoutes.routes, routeObj)
 					// }
 				}
 			}

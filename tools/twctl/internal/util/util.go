@@ -135,10 +135,54 @@ func RequestGoTypeName(r spec.Method, pkg ...string) string {
 		return ""
 	}
 
-	return GolangExpr(r.RequestType, pkg...)
+	req := GolangExpr(r.RequestType, pkg...)
+	switch r.ResponseType.(type) {
+	case *spec.StructType:
+		if !strings.HasPrefix(req, "*") {
+			return "*" + req
+		}
+	default:
+		if !strings.HasPrefix(req, "*") {
+			return "*" + req
+		}
+	}
+
+	return req
 }
 
 func ResponseGoTypeName(r spec.Method, pkg ...string) string {
+	if r.ResponseType == nil {
+		return ""
+	}
+
+	resp := GolangExpr(r.ResponseType, pkg...)
+	switch r.ResponseType.(type) {
+	case *spec.StructType:
+		if !strings.HasPrefix(resp, "*") {
+			return "*" + resp
+		}
+	}
+
+	return resp
+}
+
+func TopicRequestGoTypeName(r spec.TopicNode, pkg ...string) string {
+	if r.RequestType == nil {
+		return ""
+	}
+
+	req := GolangExpr(r.RequestType, pkg...)
+	switch r.RequestType.(type) {
+	case *spec.StructType:
+		if !strings.HasPrefix(req, "*") {
+			return "*" + req
+		}
+	}
+
+	return req
+}
+
+func TopicResponseGoTypeName(r spec.TopicNode, pkg ...string) string {
 	if r.ResponseType == nil {
 		return ""
 	}

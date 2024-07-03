@@ -74,7 +74,7 @@ func doGenProject(siteFile, dir string) error {
 
 	// b, _ := json.MarshalIndent(siteSpec, "", "  ")
 	// fmt.Println("siteSpec", string(b))
-	// spec.PrintSpec(*siteSpec)
+	// // spec.PrintSpec(*siteSpec)
 	// parser.PrintAST(parsedAST)
 
 	// os.Exit(0)

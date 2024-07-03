@@ -43,24 +43,7 @@ func genController(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec)
 	return nil
 }
 
-type ControllerMethodConfig struct {
-	RequestType    string
-	ResponseType   string
-	Request        string
-	ReturnString   string
-	ResponseString string
-	HasResp        bool
-	HasReq         bool
-	HandlerName    string
-	HasDoc         bool
-	Doc            string
-	HasPage        bool
-	ControllerName string
-	ControllerType string
-	Call           string
-}
-
-func addMissingMethods(methods []ControllerMethodConfig, dir, subDir, fileName string) error {
+func addMissingMethods(methods []MethodConfig, dir, subDir, fileName string) error {
 	// Read the file and look for all the methods and compare with the defined methods
 	filePath := path.Join(dir, subDir, fileName)
 	fbytes, err := os.ReadFile(filePath)
@@ -73,6 +56,7 @@ func addMissingMethods(methods []ControllerMethodConfig, dir, subDir, fileName s
 
 	for _, method := range methods {
 		if !strings.Contains(fileContent, method.Call) {
+
 			// Add the method definition to the newMethods slice
 			newMethods = append(newMethods, generateMethodDefinition(method))
 		}
@@ -97,7 +81,7 @@ func addMissingMethods(methods []ControllerMethodConfig, dir, subDir, fileName s
 }
 
 // This is the function to generate the method definition based on your template
-func generateMethodDefinition(method ControllerMethodConfig) string {
+func generateMethodDefinition(method MethodConfig) string {
 	tmpl := `{{if .HasDoc}}{{.Doc}}{{end}}
 func (l *{{.ControllerType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
 	// todo: add your logic here and delete this line
@@ -125,7 +109,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 
 	subDir := getControllerFolderPath(server, handler)
 	filename := path.Join(dir, subDir, strings.ToLower(handler.Name)+".go")
-	fmt.Println("filename::", filename)
+	// fmt.Println("filename::", filename)
 
 	fileExists := false
 	// check if the file exists
@@ -133,8 +117,22 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		fileExists = true
 	}
 
-	methods := []ControllerMethodConfig{}
+	requiresTempl := false
+	hasSocket := false
+
+	methods := []MethodConfig{}
 	for _, method := range handler.Methods {
+
+		if !method.IsSocket {
+			requiresTempl = true
+		} else {
+			hasSocket = true
+		}
+
+		// skip this method if it is static
+		if method.IsStatic {
+			continue
+		}
 
 		if method.Page != nil {
 			if key, ok := method.Page.Annotation.Properties["template"]; ok {
@@ -147,67 +145,125 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		var responseString string
 		var returnString string
 		var requestString string
-		if method.ResponseType != nil && len(method.ResponseType.GetName()) > 0 {
-			resp := util.ResponseGoTypeName(method, types.TypesPacket)
-			responseString = "(resp " + resp + ", err error)"
-			returnString = "return"
+		var controllerName string
+		var hasResp bool
+		var hasReq bool
+		var requestType string
+		var handlerName string
+		var controllerType string
+		var call string
+
+		controllerType = strings.Title(getControllerName(handler))
+
+		if method.IsSocket && method.SocketNode != nil {
+			for _, topic := range method.SocketNode.Topics {
+				call = util.ToPascal(topic.Topic)
+
+				requestString = ""
+				responseString = ""
+				returnString = ""
+				hasReq = false
+
+				if topic.InitiatedByClient {
+					resp := util.TopicResponseGoTypeName(topic, types.TypesPacket)
+					responseString = "(resp " + resp + ", err error)"
+					returnString = "return"
+
+					if topic.RequestType != nil && len(topic.RequestType.GetName()) > 0 {
+						hasReq = true
+						requestString = "req " + util.TopicRequestGoTypeName(topic, types.TypesPacket)
+					}
+				}
+
+				methods = append(methods, MethodConfig{
+					HandlerName:    handlerName,
+					RequestType:    requestType,
+					ResponseType:   responseString,
+					Request:        requestString,
+					ReturnString:   returnString,
+					ResponseString: responseString,
+					HasResp:        hasResp,
+					HasReq:         hasReq,
+					HasDoc:         method.Doc != nil,
+					HasPage:        method.Page != nil,
+					Doc:            "",
+					ControllerName: controllerName,
+					ControllerType: controllerType,
+					Call:           call,
+					IsSocket:       method.IsSocket,
+					Topic: Topic{
+						InitiatedByServer: !topic.InitiatedByClient,
+						InitiatedByClient: topic.InitiatedByClient,
+						Const:             "Topic" + util.ToPascal(topic.Topic),
+						ResponseType:      strings.ReplaceAll(util.TopicResponseGoTypeName(topic, types.TypesPacket), "*", "&"),
+					},
+				})
+			}
 		} else {
-			responseString = "(templ.Component, error)"
-			returnString = fmt.Sprintf(`return New(
+			if method.ResponseType != nil && len(method.ResponseType.GetName()) > 0 {
+				resp := util.ResponseGoTypeName(method, types.TypesPacket)
+				responseString = "(resp " + resp + ", err error)"
+				returnString = "return"
+			} else {
+				responseString = "(templ.Component, error)"
+				returnString = fmt.Sprintf(`return New(
 				WithConfig(l.svcCtx.Config),
 				WithRequest(c.Request()),
 				WithTitle("%s"),
 			), nil`, util.ToTitle(handler.Name))
-		}
-
-		if method.RequestType != nil && len(method.RequestType.GetName()) > 0 {
-			requestString = "req *" + util.RequestGoTypeName(method, types.TypesPacket)
-		}
-
-		hasResp := method.ResponseType != nil && len(method.ResponseType.GetName()) > 0
-		hasReq := method.RequestType != nil && len(method.RequestType.GetName()) > 0
-
-		requestType := ""
-		if hasReq {
-			requestType = util.ToTitle(method.RequestType.GetName())
-		}
-
-		handlerName := util.ToTitle(getHandlerName(handler, &method))
-
-		requestStringParts := []string{
-			requestString,
-			"c echo.Context",
-		}
-		requestString = func(parts []string) string {
-			rParts := make([]string, 0)
-			for _, part := range parts {
-				if len(part) == 0 {
-					continue
-				}
-				rParts = append(rParts, strings.TrimSpace(part))
 			}
-			return strings.Join(rParts, ", ")
-		}(requestStringParts)
 
-		controllerName := strings.ToLower(util.ToCamel(handler.Name))
+			if method.RequestType != nil && len(method.RequestType.GetName()) > 0 {
+				requestString = "req " + util.RequestGoTypeName(method, types.TypesPacket)
+			}
 
-		// fmt.Println("handlerName:", handlerName)
-		methods = append(methods, ControllerMethodConfig{
-			HandlerName:    handlerName,
-			RequestType:    requestType,
-			ResponseType:   responseString,
-			Request:        requestString,
-			ReturnString:   returnString,
-			ResponseString: responseString,
-			HasResp:        hasResp,
-			HasReq:         hasReq,
-			HasDoc:         method.Doc != nil,
-			HasPage:        method.Page != nil,
-			Doc:            "",
-			ControllerName: controllerName,
-			ControllerType: strings.Title(getControllerName(handler)),
-			Call:           strings.Title(strings.TrimSuffix(handlerName, "Handler")),
-		})
+			hasResp = method.ResponseType != nil && len(method.ResponseType.GetName()) > 0
+			hasReq := method.RequestType != nil && len(method.RequestType.GetName()) > 0
+
+			requestType = ""
+			if hasReq {
+				requestType = util.ToTitle(method.RequestType.GetName())
+			}
+
+			handlerName = util.ToTitle(getHandlerName(handler, &method))
+
+			requestStringParts := []string{
+				requestString,
+				"c echo.Context",
+			}
+			requestString = func(parts []string) string {
+				rParts := make([]string, 0)
+				for _, part := range parts {
+					if len(part) == 0 {
+						continue
+					}
+					rParts = append(rParts, strings.TrimSpace(part))
+				}
+				return strings.Join(rParts, ", ")
+			}(requestStringParts)
+
+			controllerName = strings.ToLower(util.ToCamel(handler.Name))
+			call = strings.Title(strings.TrimSuffix(handlerName, "Handler"))
+
+			// fmt.Println("handlerName:", handlerName)
+			methods = append(methods, MethodConfig{
+				HandlerName:    handlerName,
+				RequestType:    requestType,
+				ResponseType:   responseString,
+				Request:        requestString,
+				ReturnString:   returnString,
+				ResponseString: responseString,
+				HasResp:        hasResp,
+				HasReq:         hasReq,
+				HasDoc:         method.Doc != nil,
+				HasPage:        method.Page != nil,
+				Doc:            "",
+				ControllerName: controllerName,
+				ControllerType: controllerType,
+				Call:           call,
+				IsSocket:       method.IsSocket,
+			})
+		}
 	}
 
 	if fileExists {
@@ -217,50 +273,56 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 			strings.ToLower(handler.Name)+".go")
 	}
 
-	templImports := genTemplImports(rootPkg, strings.ToLower(util.ToCamel(controllerLayout+"Layout")))
+	if requiresTempl {
+		templImports := genTemplImports(rootPkg, strings.ToLower(util.ToCamel(controllerLayout+"Layout")))
 
-	// fmt.Println("templImports", templImports)
-	// templ file first
-	if err := genFile(fileGenConfig{
-		dir:             dir,
-		subdir:          subDir,
-		filename:        strings.ToLower(handler.Name) + ".templ",
-		templateName:    "controllerTemplTemplate",
-		category:        category,
-		templateFile:    controllerTemplTemplateFile,
-		builtinTemplate: controllerTemplTemplate,
-		data: map[string]any{
-			"pkgName":      subDir[strings.LastIndex(subDir, "/")+1:],
-			"templImports": templImports,
-			"templName":    util.ToCamel(handler.Name + "View"),
-			"pageTitle":    util.ToTitle(handler.Name),
-			// "controllerLayout": strings.ToLower(util.ToCamel(controllerLayout + "Layout")),
-		},
-	}); err != nil {
-		return err
-	}
+		// fmt.Println("templImports", templImports)
+		// templ file first
+		if err := genFile(fileGenConfig{
+			dir:             dir,
+			subdir:          subDir,
+			filename:        strings.ToLower(handler.Name) + ".templ",
+			templateName:    "controllerTemplTemplate",
+			category:        category,
+			templateFile:    controllerTemplTemplateFile,
+			builtinTemplate: controllerTemplTemplate,
+			data: map[string]any{
+				"pkgName":      subDir[strings.LastIndex(subDir, "/")+1:],
+				"templImports": templImports,
+				"templName":    util.ToCamel(handler.Name + "View"),
+				"pageTitle":    util.ToTitle(handler.Name),
+				// "controllerLayout": strings.ToLower(util.ToCamel(controllerLayout + "Layout")),
+			},
+		}); err != nil {
+			return err
+		}
 
-	propsImports := genPropsImports(rootPkg)
+		propsImports := genPropsImports(rootPkg)
 
-	if err := genFile(fileGenConfig{
-		dir:             dir,
-		subdir:          subDir,
-		filename:        "props.go",
-		templateName:    "controllerPropsTemplate",
-		category:        category,
-		templateFile:    propsTemplateFile,
-		builtinTemplate: propsTemplate,
-		data: map[string]any{
-			"pkgName":   subDir[strings.LastIndex(subDir, "/")+1:],
-			"Imports":   propsImports,
-			"templName": util.ToCamel(handler.Name + "View"),
-		},
-	}); err != nil {
-		return err
+		if err := genFile(fileGenConfig{
+			dir:             dir,
+			subdir:          subDir,
+			filename:        "props.go",
+			templateName:    "controllerPropsTemplate",
+			category:        category,
+			templateFile:    propsTemplateFile,
+			builtinTemplate: propsTemplate,
+			data: map[string]any{
+				"pkgName":   subDir[strings.LastIndex(subDir, "/")+1:],
+				"Imports":   propsImports,
+				"templName": util.ToCamel(handler.Name + "View"),
+			},
+		}); err != nil {
+			return err
+		}
 	}
 
 	imports := genControllerImports(handler, rootPkg)
 	controllerType := strings.Title(getControllerName(handler))
+
+	// sort.Slice(methods, func(i, j int) bool {
+	// 	return methods[i].Call < methods[j].Call
+	// })
 
 	err := genFile(fileGenConfig{
 		dir:             dir,
@@ -271,10 +333,11 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		templateFile:    controllerTemplateFile,
 		builtinTemplate: controllerTemplate,
 		data: map[string]any{
-			"pkgName":        subDir[strings.LastIndex(subDir, "/")+1:],
-			"imports":        imports,
-			"controllerType": controllerType,
-			"methods":        methods,
+			"PkgName":        subDir[strings.LastIndex(subDir, "/")+1:],
+			"Imports":        imports,
+			"ControllerType": controllerType,
+			"Methods":        methods,
+			"HasSocket":      hasSocket,
 		},
 	})
 
@@ -314,29 +377,59 @@ func genControllerImports(handler spec.Handler, parentPkg string) string {
 	var imports []string
 
 	requireTemplwind := false
+	requireEcho := false
 	hasType := false
+	hasSocket := false
+	hasEvents := false
 	for _, method := range handler.Methods {
 		// show when the response type is empty
-		if method.ResponseType == nil || method.ReturnsPartial {
+		if (method.ResponseType == nil || method.ReturnsPartial) && !method.IsSocket {
 			requireTemplwind = true
+			requireEcho = true
 		}
 
 		if method.ResponseType != nil || method.RequestType != nil {
 			hasType = true
+			requireEcho = true
+		}
+
+		if method.IsSocket {
+			hasSocket = true
+			for _, topic := range method.SocketNode.Topics {
+				if topic.ResponseType != nil || topic.RequestType != nil {
+					hasType = true
+				}
+				if !topic.InitiatedByClient {
+					hasEvents = true
+				}
+			}
 		}
 	}
 
-	imports = append(imports, fmt.Sprintf("\"%s\"\n\n", "context"))
+	imports = append(imports, fmt.Sprintf("\"%s\"", "context"))
+	if hasSocket {
+		imports = append(imports, fmt.Sprintf("\"%s\"", "net"))
+	}
+	imports = append(imports, "\n\n")
+
+	if hasEvents {
+		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.EventsDir)))
+	}
+
 	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
 
 	if hasType {
-		imports = append(imports, fmt.Sprintf("\"%s\"\n\n", pathx.JoinPackages(parentPkg, types.TypesDir)))
+		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.TypesDir)))
 	}
+
+	imports = append(imports, "\n\n")
 
 	if requireTemplwind {
 		imports = append(imports, fmt.Sprintf("\n\n\"%s\"", "github.com/a-h/templ"))
 	}
-	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/labstack/echo/v4"))
+	if requireEcho {
+		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/labstack/echo/v4"))
+	}
 	// TODO: method fix
 
 	// if requireTemplwind {

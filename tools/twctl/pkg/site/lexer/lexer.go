@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"bufio"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -36,6 +37,7 @@ const (
 	ILLEGAL TokenType = iota
 	EOF
 	IDENT
+	COMMENT
 	STRUCT_FIELD
 	ATTRIBUTE
 	OPEN_BRACE
@@ -53,6 +55,8 @@ const (
 	AT_MENUS
 	AT_MENU
 	AT_GET_METHOD
+	AT_GET_STATIC_METHOD
+	AT_GET_SOCKET_METHOD
 	AT_POST_METHOD
 	AT_PUT_METHOD
 	AT_DELETE_METHOD
@@ -82,6 +86,11 @@ func (l *Lexer) NextToken() Token {
 			continue
 		}
 
+		// for now, remove the comments
+		if strings.HasPrefix(line, "//") {
+			continue
+		}
+
 		tokenized := l.tokenizeLine(line)
 		// fmt.Println("line: ", line, tokenized)
 		return tokenized
@@ -102,6 +111,9 @@ func (l *Lexer) tokenizeLine(line string) Token {
 		return Token{Type: OPEN_PAREN, Literal: "("}
 	case line == ")":
 		return Token{Type: CLOSE_PAREN, Literal: ")"}
+	case strings.HasPrefix(line, "//"):
+		fmt.Println("COMMENT", line)
+		return Token{Type: COMMENT, Literal: line}
 	case strings.HasPrefix(line, "type"):
 		return Token{Type: AT_TYPE, Literal: l.cleanPrefix(line, "type")}
 	case strings.HasPrefix(line, "@server"):
@@ -112,6 +124,10 @@ func (l *Lexer) tokenizeLine(line string) Token {
 		return Token{Type: AT_DOC, Literal: l.cleanPrefix(line, "@doc")}
 	case strings.HasPrefix(line, "@handler"):
 		return Token{Type: AT_HANDLER, Literal: l.cleanPrefix(line, "@handler")}
+	case strings.HasPrefix(line, "get static"):
+		return Token{Type: AT_GET_STATIC_METHOD, Literal: l.cleanPrefix(line, "get static")}
+	case strings.HasPrefix(line, "get socket"):
+		return Token{Type: AT_GET_SOCKET_METHOD, Literal: l.cleanPrefix(line, "get socket")}
 	case strings.HasPrefix(line, "get"):
 		return Token{Type: AT_GET_METHOD, Literal: l.cleanPrefix(line, "get")}
 	case strings.HasPrefix(line, "post"):

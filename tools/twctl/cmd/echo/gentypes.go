@@ -46,6 +46,24 @@ func genTypes(dir string, cfg *config.Config, spec *spec.SiteSpec) error {
 		return err
 	}
 
+	consts := make(map[string]string, 0)
+	for _, s := range spec.Servers {
+		for _, srv := range s.Services {
+			for _, h := range srv.Handlers {
+				for _, m := range h.Methods {
+					if m.IsSocket {
+						for _, t := range m.SocketNode.Topics {
+							constName := "Topic" + util.ToPascal(t.Topic)
+							if _, ok := consts[constName]; !ok {
+								consts[constName] = t.Topic
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
 	typeFilename, err := format.FileNamingFormat(cfg.NamingFormat, typesFile)
 	if err != nil {
 		return err
@@ -64,8 +82,10 @@ func genTypes(dir string, cfg *config.Config, spec *spec.SiteSpec) error {
 		templateFile:    typesTemplateFile,
 		builtinTemplate: typesTemplate,
 		data: map[string]any{
-			"types":        val,
-			"containsTime": false,
+			"Types":        val,
+			"ContainsTime": false,
+			"Consts":       consts,
+			"HasConsts":    len(consts) > 0,
 		},
 	})
 }

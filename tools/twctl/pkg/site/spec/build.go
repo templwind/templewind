@@ -33,7 +33,7 @@ func BuildSiteSpec(ast ast.SiteAST) *SiteSpec {
 			for _, h := range srv.Handlers {
 				methods := make([]Method, 0)
 				for _, m := range h.Methods {
-					methods = append(methods, NewMethod(m.Method, m.Route, m.RequestType, m.ResponseType, buildPage(m.Page), buildDoc(m.Doc), m.ReturnsPartial))
+					methods = append(methods, NewMethod(m.Method, m.Route, m.RequestType, m.ResponseType, buildPage(m.Page), buildDoc(m.Doc), m.ReturnsPartial, m.IsStatic, m.IsSocket, buildSocketNode(m.SocketNode)))
 				}
 
 				handler := NewHandler(h.Name, methods)
@@ -59,6 +59,13 @@ func buildDoc(doc *ast.DocNode) *DocNode {
 		return nil
 	}
 	return NewDocNode(NewAnnotation(doc.Attrs))
+}
+
+func buildSocketNode(socketNode *ast.SocketNode) *SocketNode {
+	if socketNode == nil {
+		return nil
+	}
+	return NewSocketNode(socketNode.Method, socketNode.Route, socketNode.Topics)
 }
 
 func PrintSpec(siteSpec SiteSpec) {

@@ -60,22 +60,14 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 	handlerFile := path.Join(dir, subDir, filename+".go")
 	os.Remove(handlerFile)
 
-	type MethodConfig struct {
-		RequestType    string
-		ResponseType   string
-		HasResp        bool
-		HasReq         bool
-		HandlerName    string
-		HasDoc         bool
-		Doc            string
-		HasPage        bool
-		ControllerName string
-		ControllerType string
-		Call           string
-	}
-
 	methods := []MethodConfig{}
 	for _, method := range handler.Methods {
+		// fmt.Println("method:", method.Route)
+
+		if method.IsStatic {
+			continue
+		}
+
 		hasResp := method.ResponseType != nil && len(method.ResponseType.GetName()) > 0
 		hasReq := method.RequestType != nil && len(method.RequestType.GetName()) > 0
 
@@ -90,20 +82,68 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 
 		handlerName := util.ToTitle(getHandlerName(handler, &method))
 
+		topicsFromClient := []Topic{}
+		topicsFromServer := []Topic{}
+		if method.IsSocket {
+
+			for _, topic := range method.SocketNode.Topics {
+				var reqType, resType string
+				var hasReqType, hasResType bool
+				if topic.RequestType != nil && len(topic.RequestType.GetName()) > 0 {
+					hasReqType = true
+					reqType = util.ToTitle(topic.RequestType.GetName())
+				}
+				if topic.ResponseType != nil && len(topic.ResponseType.GetName()) > 0 {
+					hasResType = true
+					resType = util.ToTitle(topic.ResponseType.GetName())
+				}
+
+				if !topic.InitiatedByClient {
+					topicsFromServer = append(topicsFromServer, Topic{
+						RawTopic:     strings.TrimSpace(topic.Topic),
+						Topic:        "Topic" + util.ToPascal(topic.Topic),
+						Name:         topic.GetName(),
+						RequestType:  reqType,
+						HasReqType:   hasReqType,
+						ResponseType: resType,
+						HasRespType:  hasResType,
+						Call:         util.ToPascal(util.ToTitle(topic.Topic)),
+					})
+				} else {
+					topicsFromClient = append(topicsFromClient, Topic{
+						RawTopic:     strings.TrimSpace(topic.Topic),
+						Topic:        "Topic" + util.ToPascal(topic.Topic),
+						Name:         topic.GetName(),
+						RequestType:  reqType,
+						HasReqType:   hasReqType,
+						ResponseType: resType,
+						HasRespType:  hasResType,
+						Call:         util.ToPascal(util.ToTitle(topic.Topic)),
+					})
+				}
+			}
+		}
+
 		// fmt.Println("handlerName:", handlerName)
 		methods = append(methods, MethodConfig{
-			HandlerName:    handlerName,
-			RequestType:    requestType,
-			ResponseType:   responseType,
-			HasResp:        hasResp,
-			HasReq:         hasReq,
-			HasDoc:         method.Doc != nil,
-			HasPage:        method.Page != nil,
-			ControllerName: controllerName,
-			ControllerType: strings.Title(getControllerName(handler)),
-			Call:           strings.Title(strings.TrimSuffix(handlerName, "Handler")),
+			HandlerName:      handlerName,
+			RequestType:      requestType,
+			ResponseType:     responseType,
+			HasResp:          hasResp,
+			HasReq:           hasReq,
+			HasDoc:           method.Doc != nil,
+			HasPage:          method.Page != nil,
+			ControllerName:   controllerName,
+			ControllerType:   strings.Title(getControllerName(handler)),
+			Call:             strings.Title(strings.TrimSuffix(handlerName, "Handler")),
+			IsSocket:         method.IsSocket,
+			TopicsFromClient: topicsFromClient,
+			TopicsFromServer: topicsFromServer,
 		})
 	}
+
+	// b, _ := json.MarshalIndent(methods, "", "  ")
+	// fmt.Println("methods", string(b))
 
 	imports := genHandlerImports(server, handler, rootPkg)
 
@@ -132,23 +172,49 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 	}
 
 	hasTypes := false
+	hasTypesFromSocket := false
+	requiresEvents := false
 	for _, method := range handler.Methods {
 		if method.RequestType != nil && len(method.RequestType.GetName()) > 0 {
 			hasTypes = true
 			break
 		}
+		if method.IsSocket {
+			for _, topic := range method.SocketNode.Topics {
+				if topic.RequestType != nil && len(topic.RequestType.GetName()) > 0 {
+					hasTypesFromSocket = true
+				}
+				if topic.ResponseType != nil && len(topic.ResponseType.GetName()) > 0 {
+					hasTypesFromSocket = true
+				}
+				if !topic.InitiatedByClient {
+					requiresEvents = true
+				}
+			}
+		}
 	}
 
+	hasSocket := false
 	hasView := false
 	for _, method := range handler.Methods {
+		if method.IsSocket {
+			hasSocket = true
+			continue
+		}
 		if method.Method == "GET" || method.ReturnsPartial {
 			hasView = true
 			break
 		}
 	}
 
-	imports := []string{
-		fmt.Sprintf("\"%s\"", "net/http"),
+	imports := []string{}
+
+	if hasSocket {
+		imports = append(imports, fmt.Sprintf("\"%s\"", "context"))
+		imports = append(imports, fmt.Sprintf("\"%s\"", "encoding/json"))
+		imports = append(imports, fmt.Sprintf("\"%s\"", "log"))
+	} else {
+		imports = append(imports, fmt.Sprintf("\"%s\"", "net/http"))
 	}
 
 	if hasView {
@@ -156,10 +222,15 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 		imports = append(imports, fmt.Sprintf("\"%s\"", "time"))
 	}
 
-	imports = append(imports, fmt.Sprintf("\n\n\"%s\"", pathx.JoinPackages(parentPkg, getControllerFolderPath(server, handler))))
+	imports = append(imports, "\n\n")
+
+	if requiresEvents {
+		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.EventsDir)))
+	}
+	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, getControllerFolderPath(server, handler))))
 	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
 
-	if hasTypes {
+	if hasTypes || hasTypesFromSocket {
 		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.TypesDir)))
 	}
 
@@ -171,7 +242,14 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 		imports = append(imports, fmt.Sprintf("header \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "header")))
 	}
 
-	imports = append(imports, fmt.Sprintf("\n\n\"%s\"", "github.com/labstack/echo/v4"))
+	imports = append(imports, "\n\n")
+
+	if hasSocket {
+		imports = append(imports, fmt.Sprintf("gobwasWs \"%s\"", "github.com/gobwas/ws"))
+		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/gobwas/ws/wsutil"))
+	}
+
+	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/labstack/echo/v4"))
 	if hasTypes {
 		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/zeromicro/go-zero/rest/httpx"))
 	}
@@ -212,23 +290,26 @@ func getHandlerName(handler spec.Handler, method *spec.Method) string {
 	}
 
 	if method != nil {
-		routePart := getRoutePart(handler, method)
-		return baseName + strings.Title(strings.ToLower(method.Method)) + routePart + "Handler"
+		routeName := getRouteName(handler, method)
+		return baseName + strings.Title(strings.ToLower(method.Method)) + routeName + "Handler"
 	}
 
 	return baseName + "Handler"
 }
 
-// getRoutePart returns the sanitized part of the route for naming.
-func getRoutePart(handler spec.Handler, method *spec.Method) string {
+// getRouteName returns the sanitized part of the route for naming.
+func getRouteName(handler spec.Handler, method *spec.Method) string {
 	baseRoute := handler.Methods[0].Route // Assuming the first method's route is the base route
 	trimmedRoute := strings.TrimPrefix(method.Route, baseRoute)
-	sanitizedRoute := sanitizeRoute(trimmedRoute)
-	return sanitizedRoute
+	routeName := titleCaseRoute(trimmedRoute)
+
+	// fmt.Println("RouteName", method.Route, baseRoute, trimmedRoute, routeName)
+
+	return routeName
 }
 
-// sanitizeRoute converts the route to a title case format suitable for naming.
-func sanitizeRoute(route string) string {
+// titleCaseRoute converts the route to a title case format suitable for naming.
+func titleCaseRoute(route string) string {
 	// Remove leading and trailing slashes
 	route = strings.Trim(route, "/")
 

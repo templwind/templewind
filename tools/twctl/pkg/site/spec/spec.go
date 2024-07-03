@@ -2,6 +2,8 @@ package spec
 
 import (
 	"fmt"
+
+	"github.com/templwind/templwind/tools/twctl/pkg/site/ast"
 )
 
 // Define the constants used in the spec
@@ -58,6 +60,22 @@ type (
 		HandlerComment Doc
 		DocAnnotation  Annotation
 		ReturnsPartial bool
+		IsStatic       bool
+		IsSocket       bool
+		SocketNode     *SocketNode
+	}
+
+	SocketNode struct {
+		Method string
+		Route  string
+		Topics []TopicNode
+	}
+
+	TopicNode struct {
+		Topic             string
+		InitiatedByClient bool
+		RequestType       Type
+		ResponseType      Type
 	}
 
 	// Handler describes a Site handler
@@ -185,7 +203,7 @@ func NewHandler(name string, methods []Method) *Handler {
 }
 
 // NewMethod creates a new method for a handler.
-func NewMethod(method, route string, requestType, responseType interface{}, page *Page, doc *DocNode, returnsPartial bool) Method {
+func NewMethod(method, route string, requestType, responseType interface{}, page *Page, doc *DocNode, returnsPartial, isStatic, isSocket bool, socketNode *SocketNode) Method {
 	var (
 		reqType Type
 		resType Type
@@ -200,15 +218,51 @@ func NewMethod(method, route string, requestType, responseType interface{}, page
 	}
 
 	return Method{
-		Method: method,
-		Route:  route,
-		// Request:      request,
-		RequestType: reqType,
-		// Response:     response,
+		Method:         method,
+		Route:          route,
+		RequestType:    reqType,
 		ResponseType:   resType,
 		Page:           page,
 		Doc:            doc,
 		ReturnsPartial: returnsPartial,
+		IsStatic:       isStatic,
+		IsSocket:       isSocket,
+		SocketNode:     socketNode,
+	}
+}
+
+func NewSocketNode(method, route string, topicNodes []ast.TopicNode) *SocketNode {
+	topics := []TopicNode{}
+	for _, topic := range topicNodes {
+		topics = append(topics, NewTopicNode(topic.Topic, topic.InitiatedByClient, topic.RequestType, topic.ResponseType))
+	}
+
+	return &SocketNode{
+		Method: method,
+		Route:  route,
+		Topics: topics,
+	}
+}
+
+func NewTopicNode(topic string, initiatedByClient bool, requestType, responseType interface{}) TopicNode {
+	var (
+		reqType Type
+		resType Type
+	)
+
+	if requestType != nil {
+		reqType = requestType.(Type)
+	}
+
+	if responseType != nil {
+		resType = responseType.(Type)
+	}
+
+	return TopicNode{
+		Topic:             topic,
+		InitiatedByClient: initiatedByClient,
+		RequestType:       reqType,
+		ResponseType:      resType,
 	}
 }
 
@@ -416,5 +470,22 @@ func (m *Method) GetDocuments() []string {
 }
 
 func (m *Method) GetFields() []Field {
+	return nil
+}
+
+// Methods to implement the Type interface for TopicNode
+func (m *TopicNode) GetName() string {
+	return m.Topic
+}
+
+func (m *TopicNode) GetComments() []string {
+	return nil
+}
+
+func (m *TopicNode) GetDocuments() []string {
+	return nil
+}
+
+func (m *TopicNode) GetFields() []Field {
 	return nil
 }

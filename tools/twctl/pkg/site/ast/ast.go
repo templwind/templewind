@@ -60,7 +60,25 @@ type MethodNode struct {
 	ResponseType   interface{}
 	Page           *PageNode
 	Doc            *DocNode
+	IsStatic       bool
+	IsSocket       bool
+	SocketNode     *SocketNode
 	ReturnsPartial bool
+}
+
+type SocketNode struct {
+	BaseNode
+	Method string
+	Route  string
+	Topics []TopicNode
+}
+
+type TopicNode struct {
+	BaseNode
+	Topic             string
+	InitiatedByClient bool
+	RequestType       interface{}
+	ResponseType      interface{}
 }
 
 // HandlerNode represents a handler in a service with multiple method definitions.
@@ -228,5 +246,30 @@ func NewMethodNode(method, route string, requestType, responseType interface{}) 
 		Route:        route,
 		RequestType:  requestType,
 		ResponseType: responseType,
+	}
+}
+
+func NewSocketNode(method, route string, topics []TopicNode) *SocketNode {
+	return &SocketNode{
+		BaseNode: BaseNode{
+			Type: NodeTypeMethod,
+			Name: method,
+		},
+		Method: method,
+		Route:  route,
+		Topics: topics,
+	}
+}
+
+func NewTopicNode(topic string, requestType, responseType interface{}, initiatedByClient bool) TopicNode {
+	return TopicNode{
+		BaseNode: BaseNode{
+			Type: NodeTypeMethod,
+			Name: topic,
+		},
+		RequestType:       requestType,
+		ResponseType:      responseType,
+		InitiatedByClient: initiatedByClient,
+		Topic:             topic,
 	}
 }
