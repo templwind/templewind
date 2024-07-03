@@ -37,6 +37,7 @@ const (
 	layoutTemplateFile          = "templates/layout.tpl"
 	layoutTemplTemplateFile     = "templates/layout.templ.tpl"
 	propsTemplateFile           = "templates/props.tpl"
+	eventsTemplateFile          = "templates/events.tpl"
 )
 
 var templates = map[string]string{
@@ -69,6 +70,7 @@ var templates = map[string]string{
 	layoutTemplateFile:          layoutTemplate,
 	layoutTemplTemplateFile:     layoutTemplTemplate,
 	propsTemplateFile:           propsTemplate,
+	eventsTemplateFile:          eventsTemplate,
 }
 
 // Category returns the category of the api files.

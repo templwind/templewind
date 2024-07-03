@@ -58,6 +58,11 @@ templ:
 .PHONY: templ-watch
 templ-watch: 
 	templ generate --watch
+
+## templ-fmt: auto-formats templ files
+.PHONY: templ-fmt
+templ-fmt: 
+	templ fmt
 	
 ## pnpm-build: build frontend
 .PHONY: pnpm-build
@@ -74,6 +79,11 @@ build:
 .PHONY: staticcheck
 staticcheck:
 	staticcheck ./...
+
+## gen: Generate the website from the ast code
+.PHONY: gen
+gen:
+	soul echo -a ${EXECUTABLE}.api -d .
 
 ## xo: generate models from database
 .PHONY: xo

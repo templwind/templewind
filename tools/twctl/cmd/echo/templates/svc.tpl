@@ -8,6 +8,7 @@ type ServiceContext struct {
 	Config *{{.config}}
 	DB         *sqlx.DB
 	{{.middleware}}
+	Menus      map[string][]config.MenuEntry
 }
 
 func NewServiceContext(c *{{.config}}) *ServiceContext {
@@ -18,5 +19,6 @@ func NewServiceContext(c *{{.config}}) *ServiceContext {
 			db.WithEnableWALMode(true), // Enable WAL mode if needed
 		).GetDB(),
 		{{.middlewareAssignment}}
+		Menus:      c.Menus,
 	}
 }

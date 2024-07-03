@@ -6,9 +6,13 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/templwind/templwind/tools/twctl/internal/types"
 	"github.com/templwind/templwind/tools/twctl/internal/util"
 	"github.com/templwind/templwind/tools/twctl/pkg/site/spec"
 )
+
+//go:embed templates/events.tpl
+var eventsTemplate string
 
 //go:embed templates/readme.tpl
 var readmeTemplate string
@@ -71,6 +75,13 @@ func genNpmFiles(dir string, site *spec.SiteSpec) error {
 		builtinTemplate string
 		data            map[string]string
 	}{
+		{
+			filename:        "events.go",
+			subdir:          types.EventsDir,
+			templateName:    "eventsTemplate",
+			templateFile:    eventsTemplateFile,
+			builtinTemplate: eventsTemplate,
+		},
 		{
 			filename:        "README.md",
 			templateName:    "readmeTemplate",

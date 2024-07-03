@@ -228,7 +228,7 @@ func getRoutes(site *spec.SiteSpec) ([]group, error) {
 					// if m.RequestType != nil {
 					handlerName := util.ToTitle(getHandlerName(r, &m))
 					if len(folder) > 0 {
-						handlerName = toPrefix(folder) + "." + strings.ToUpper(handlerName[:1]) + handlerName[1:]
+						handlerName = toPrefix(folder) + "." + util.ToPascal(handlerName)
 					}
 
 					handlerName = handlerName + "(svcCtx)"

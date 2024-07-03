@@ -12,7 +12,6 @@ import (
 	"github.com/templwind/templwind/tools/twctl/pkg/site/spec"
 
 	"github.com/zeromicro/go-zero/tools/goctl/config"
-	"github.com/zeromicro/go-zero/tools/goctl/util/format"
 	"github.com/zeromicro/go-zero/tools/goctl/util/pathx"
 )
 
@@ -51,10 +50,12 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 	// fmt.Println("server", server)
 	// os.Exit(0)
 
-	filename, err := format.FileNamingFormat(cfg.NamingFormat, handlerName)
-	if err != nil {
-		return err
-	}
+	filename := strings.ToLower(util.ToCamel(handlerName))
+
+	// filename, err := format.FileNamingFormat(cfg.NamingFormat, handlerName)
+	// if err != nil {
+	// 	return err
+	// }
 
 	subDir := getHandlerFolderPath(server)
 	handlerFile := path.Join(dir, subDir, filename+".go")
@@ -73,14 +74,14 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 
 		requestType := ""
 		if hasReq {
-			requestType = util.ToTitle(method.RequestType.GetName())
+			requestType = util.ToPascal(method.RequestType.GetName())
 		}
 		responseType := ""
 		if hasResp {
-			responseType = util.ToTitle(method.ResponseType.GetName())
+			responseType = util.ToPascal(method.ResponseType.GetName())
 		}
 
-		handlerName := util.ToTitle(getHandlerName(handler, &method))
+		handlerName := util.ToPascal(getHandlerName(handler, &method))
 
 		topicsFromClient := []Topic{}
 		topicsFromServer := []Topic{}
@@ -134,8 +135,8 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 			HasDoc:           method.Doc != nil,
 			HasPage:          method.Page != nil,
 			ControllerName:   controllerName,
-			ControllerType:   strings.Title(getControllerName(handler)),
-			Call:             strings.Title(strings.TrimSuffix(handlerName, "Handler")),
+			ControllerType:   util.ToPascal(getControllerName(handler)),
+			Call:             util.ToPascal(strings.TrimSuffix(handlerName, "Handler")),
 			IsSocket:         method.IsSocket,
 			TopicsFromClient: topicsFromClient,
 			TopicsFromServer: topicsFromServer,
@@ -278,6 +279,7 @@ func getHandlerFolderPath(server spec.Server) string {
 
 	folder = strings.TrimPrefix(folder, "/")
 	folder = strings.TrimSuffix(folder, "/")
+	folder = util.ToPascal(folder)
 
 	return path.Join(types.HandlerDir, folder)
 }
@@ -294,7 +296,7 @@ func getHandlerName(handler spec.Handler, method *spec.Method) string {
 		return baseName + strings.Title(strings.ToLower(method.Method)) + routeName + "Handler"
 	}
 
-	return baseName + "Handler"
+	return util.ToPascal(baseName + "Handler")
 }
 
 // getRouteName returns the sanitized part of the route for naming.

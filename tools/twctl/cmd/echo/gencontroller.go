@@ -109,6 +109,8 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 
 	subDir := getControllerFolderPath(server, handler)
 	filename := path.Join(dir, subDir, strings.ToLower(handler.Name)+".go")
+
+	controllerType := util.ToPascal(getControllerName(handler))
 	// fmt.Println("filename::", filename)
 
 	fileExists := false
@@ -150,10 +152,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		var hasReq bool
 		var requestType string
 		var handlerName string
-		var controllerType string
 		var call string
-
-		controllerType = strings.Title(getControllerName(handler))
 
 		if method.IsSocket && method.SocketNode != nil {
 			for _, topic := range method.SocketNode.Topics {
@@ -243,7 +242,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 			}(requestStringParts)
 
 			controllerName = strings.ToLower(util.ToCamel(handler.Name))
-			call = strings.Title(strings.TrimSuffix(handlerName, "Handler"))
+			call = util.ToPascal(strings.TrimSuffix(handlerName, "Handler"))
 
 			// fmt.Println("handlerName:", handlerName)
 			methods = append(methods, MethodConfig{
@@ -278,10 +277,11 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 
 		// fmt.Println("templImports", templImports)
 		// templ file first
+
 		if err := genFile(fileGenConfig{
 			dir:             dir,
 			subdir:          subDir,
-			filename:        strings.ToLower(handler.Name) + ".templ",
+			filename:        strings.ToLower(util.ToCamel(handler.Name)) + ".templ",
 			templateName:    "controllerTemplTemplate",
 			category:        category,
 			templateFile:    controllerTemplTemplateFile,
@@ -318,7 +318,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 	}
 
 	imports := genControllerImports(handler, rootPkg)
-	controllerType := strings.Title(getControllerName(handler))
+	// controllerType := strings.Title(getControllerName(handler))
 
 	// sort.Slice(methods, func(i, j int) bool {
 	// 	return methods[i].Call < methods[j].Call
@@ -327,7 +327,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 	err := genFile(fileGenConfig{
 		dir:             dir,
 		subdir:          subDir,
-		filename:        strings.ToLower(handler.Name) + ".go",
+		filename:        strings.ToLower(util.ToCamel(handler.Name)) + ".go",
 		templateName:    "controllerTemplate",
 		category:        category,
 		templateFile:    controllerTemplateFile,
@@ -352,8 +352,9 @@ func getControllerFolderPath(server spec.Server, handler spec.Handler) string {
 	}
 	folder = strings.TrimPrefix(folder, "/")
 	folder = strings.TrimSuffix(folder, "/")
+	folder = strings.ToLower(util.ToCamel(folder))
 
-	return path.Join(types.ControllerDir, folder, strings.ToLower(handler.Name))
+	return path.Join(types.ControllerDir, folder, strings.ToLower(util.ToCamel(handler.Name)))
 }
 
 func genTemplImports(parentPkg, fileName string) string {
