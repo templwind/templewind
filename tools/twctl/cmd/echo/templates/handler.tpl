@@ -21,8 +21,8 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 		}
 		defer conn.Close()
 
-		// Create a new ws controller
-		l := {{.ControllerName}}.New{{.ControllerType}}(c.Request().Context(), svcCtx, conn)
+		// Create a new ws logic instance
+		l := {{.LogicName}}.New{{.LogicType}}(c.Request().Context(), svcCtx, conn)
 
 		// Handle connect event
 		if err := wsutil.WriteServerMessage(conn, gobwasWs.OpText, []byte("ok")); err != nil {
@@ -108,8 +108,26 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 			})
 		}
 		
-		{{end}}l := {{.ControllerName}}.New{{.ControllerType}}(c.Request().Context(), svcCtx)
+		{{end}}l := {{.LogicName}}.New{{.LogicType}}(c.Request().Context(), svcCtx)
 		{{if .HasResp}}resp, {{else}}content, {{end}}err := l.{{.Call}}({{if .HasReq}}&req, {{end}}c)
+		{{- if .ReturnsPartial}}
+		if err != nil {
+			// Log the error and send a generic error message to the client
+			c.Logger().Error(err)
+			return templwind.Render(c, http.StatusInternalServerError, error5x.New(
+				error5x.WithErrors(
+					"Internal Server Error",
+					err.Error(),
+				),
+			))
+		}
+
+		if content != nil {
+			return templwind.Render(c, http.StatusOK, content)
+		} else {
+			return nil
+		}
+		{{- else}}
 		if err != nil {
 			// Log the error and send a generic error message to the client
 			c.Logger().Error(err)
@@ -130,8 +148,8 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 							svcCtx.Config.Assets.CSS...,
 						),
 					)),
-					baseof.WithContent(error500.New(
-						error500.WithErrors(
+					baseof.WithContent(error5x.New(
+						error5x.WithErrors(
 							"Internal Server Error",
 						),
 					)),
@@ -165,6 +183,6 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 				)),
 				baseof.WithContent(content),
 			),
-		){{end}}{{end}}
+		){{end}}{{end}}{{end}}
 	}
 }{{end}}

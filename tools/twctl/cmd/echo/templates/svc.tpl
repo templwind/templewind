@@ -7,7 +7,7 @@ import (
 type ServiceContext struct {
 	Config *{{.config}}
 	DB         *sqlx.DB
-	{{.middleware}}
+	{{.middleware -}}
 	Menus      map[string][]config.MenuEntry
 }
 
@@ -18,7 +18,7 @@ func NewServiceContext(c *{{.config}}) *ServiceContext {
 			db.WithDSN(c.DSN),
 			db.WithEnableWALMode(true), // Enable WAL mode if needed
 		).GetDB(),
-		{{.middlewareAssignment}}
+		{{.middlewareAssignment -}}
 		Menus:      c.Menus,
 	}
 }

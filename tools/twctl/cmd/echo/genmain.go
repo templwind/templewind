@@ -50,7 +50,7 @@ func genMainImports(parentPkg string) string {
 	imports = append(imports, fmt.Sprintf("\"%s\"\n", pathx.JoinPackages(parentPkg, types.ContextDir)))
 	imports = append(imports, fmt.Sprintf("_ \"%s\"", "github.com/joho/godotenv/autoload"))
 	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/labstack/echo/v4/middleware"))
+	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind/conf"))
 	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind/webserver"))
-	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/zeromicro/go-zero/core/conf"))
 	return strings.Join(imports, "\n\t")
 }

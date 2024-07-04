@@ -11,40 +11,55 @@ import (
 	"github.com/templwind/templwind/tools/twctl/internal/util"
 	"github.com/templwind/templwind/tools/twctl/pkg/site/spec"
 
-	"github.com/zeromicro/go-zero/tools/goctl/config"
 	"github.com/zeromicro/go-zero/tools/goctl/util/pathx"
 )
 
 //go:embed templates/handler.tpl
 var handlerTemplate string
 
-func genHandlers(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) error {
+//go:embed templates/404handler.tpl
+var notFoundHandlerTemplate string
+
+func genHandlers(dir, rootPkg string, site *spec.SiteSpec) error {
 	for _, server := range site.Servers {
 		for _, service := range server.Services {
 			for _, handler := range service.Handlers {
-				if err := genHandler(dir, rootPkg, cfg, server, handler); err != nil {
+				if err := genHandler(dir, rootPkg, server, handler); err != nil {
 					return err
 				}
 			}
 		}
 	}
 
-	return nil
+	// generate the 404 handler
+	return genHandler(dir, rootPkg, spec.Server{
+		Annotation: spec.NewAnnotation(map[string]interface{}{
+			types.GroupProperty: "notfound",
+		}),
+	}, spec.Handler{
+		Name: "notfound",
+		Methods: []spec.Method{
+			{
+				Method: "GET",
+				Route:  "/*",
+			},
+		},
+	})
 }
 
-func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, handler spec.Handler) error {
+func genHandler(dir, rootPkg string, server spec.Server, handler spec.Handler) error {
 	handlerName := getHandlerName(handler, nil)
 	handlerPath := getHandlerFolderPath(server)
-	pkgName := handlerPath[strings.LastIndex(handlerPath, "/")+1:]
-	// controllerName := defaultControllerPackage
+	pkgName := strings.ToLower(handlerPath[strings.LastIndex(handlerPath, "/")+1:])
+	// logicName := defaultLogicPackage
 	if handlerPath != types.HandlerDir {
-		handlerName = strings.Title(handlerName)
-		// controllerName = pkgName
+		handlerName = util.ToPascal(handlerName)
+		// logicName = pkgName
 	}
 
-	controllerName := strings.ToLower(util.ToCamel(handler.Name))
+	logicName := strings.ToLower(util.ToCamel(handler.Name))
 
-	// fmt.Println("controllerName:", controllerName, handler.Name)
+	// fmt.Println("logicName:", logicName, handler.Name)
 	// fmt.Println("handlerPath:", filepath.Join(handlerPath, util.ToKebab(handler.Name)))
 
 	// fmt.Println("server", server)
@@ -134,19 +149,39 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 			HasReq:           hasReq,
 			HasDoc:           method.Doc != nil,
 			HasPage:          method.Page != nil,
-			ControllerName:   controllerName,
-			ControllerType:   util.ToPascal(getControllerName(handler)),
+			LogicName:        logicName,
+			LogicType:        util.ToPascal(getLogicName(handler)),
 			Call:             util.ToPascal(strings.TrimSuffix(handlerName, "Handler")),
 			IsSocket:         method.IsSocket,
 			TopicsFromClient: topicsFromClient,
 			TopicsFromServer: topicsFromServer,
+			ReturnsPartial:   method.ReturnsPartial,
 		})
 	}
 
 	// b, _ := json.MarshalIndent(methods, "", "  ")
 	// fmt.Println("methods", string(b))
 
-	imports := genHandlerImports(server, handler, rootPkg)
+	if handler.Name == "notfound" {
+		imports := genHandlerImports(server, handler, rootPkg, true)
+
+		return genFile(fileGenConfig{
+			dir:             dir,
+			subdir:          subDir,
+			filename:        filename + ".go",
+			templateName:    "notFoundHandlerTemplate",
+			category:        "handler",
+			templateFile:    notFoundHandlerTemplateFile,
+			builtinTemplate: notFoundHandlerTemplate,
+			data: map[string]any{
+				"PkgName": pkgName,
+				"Imports": imports,
+				"Methods": methods,
+			},
+		})
+	}
+
+	imports := genHandlerImports(server, handler, rootPkg, false)
 
 	return genFile(fileGenConfig{
 		dir:             dir,
@@ -164,7 +199,7 @@ func genHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, han
 	})
 }
 
-func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg string) string {
+func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg string, omitLogic bool) string {
 	theme := server.GetAnnotation("theme")
 	if len(theme) == 0 {
 		theme = "themes/templwind"
@@ -228,7 +263,10 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 	if requiresEvents {
 		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.EventsDir)))
 	}
-	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, getControllerFolderPath(server, handler))))
+
+	if !omitLogic {
+		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, getLogicFolderPath(server, handler))))
+	}
 	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
 
 	if hasTypes || hasTypesFromSocket {
@@ -237,7 +275,11 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 
 	if hasView {
 		imports = append(imports, fmt.Sprintf("\n\nbaseof \"%s\"", pathx.JoinPackages(parentPkg, theme, "layouts/baseof")))
-		imports = append(imports, fmt.Sprintf("error500 \"%s\"", pathx.JoinPackages(parentPkg, theme, "error500")))
+		if omitLogic {
+			imports = append(imports, fmt.Sprintf("error4x \"%s\"", pathx.JoinPackages(parentPkg, theme, "error4x")))
+		} else {
+			imports = append(imports, fmt.Sprintf("error5x \"%s\"", pathx.JoinPackages(parentPkg, theme, "error5x")))
+		}
 		imports = append(imports, fmt.Sprintf("footer \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "footer")))
 		imports = append(imports, fmt.Sprintf("head \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "head")))
 		imports = append(imports, fmt.Sprintf("header \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "header")))
@@ -279,7 +321,7 @@ func getHandlerFolderPath(server spec.Server) string {
 
 	folder = strings.TrimPrefix(folder, "/")
 	folder = strings.TrimSuffix(folder, "/")
-	folder = util.ToPascal(folder)
+	folder = strings.ToLower(util.ToPascal(folder))
 
 	return path.Join(types.HandlerDir, folder)
 }
@@ -331,13 +373,13 @@ func titleCaseRoute(route string) string {
 	return strings.Join(parts, "")
 }
 
-func getControllerName(handler spec.Handler) string {
+func getLogicName(handler spec.Handler) string {
 	baseName, err := getHandlerBaseName(handler)
 	if err != nil {
 		panic(err)
 	}
 
-	return baseName + "Controller"
+	return baseName + "Logic"
 }
 
 func getPropsName(handler spec.Handler) string {

@@ -10,8 +10,9 @@ import (
 	"fmt"
 	"strings"
 
-	"{{.BaseImportPath}}/buildsql"
 	"{{.BaseImportPath}}/types"
+
+	"github.com/localrivet/buildsql"
 )
 
 var (

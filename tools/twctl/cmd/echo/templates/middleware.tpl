@@ -12,10 +12,10 @@ func New{{.name}}() *{{.name}} {
 }
 
 func (m *{{.name}})Handle(next echo.HandlerFunc) echo.HandlerFunc {
-	return func(e echo.Context) error {
+	return func(c echo.Context) error {
 		// TODO generate middleware implement function, delete after code implementation
 
 		// Passthrough to next handler if need
-		return next(e)
+		return next(c)
 	}
 }

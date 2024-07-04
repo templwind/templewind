@@ -14,6 +14,12 @@ import (
 //go:embed templates/events.tpl
 var eventsTemplate string
 
+//go:embed templates/dockerfile.tpl
+var dockerfileTemplate string
+
+//go:embed templates/docker-compose.tpl
+var dockerComposeTemplate string
+
 //go:embed templates/readme.tpl
 var readmeTemplate string
 
@@ -81,6 +87,21 @@ func genNpmFiles(dir string, site *spec.SiteSpec) error {
 			templateName:    "eventsTemplate",
 			templateFile:    eventsTemplateFile,
 			builtinTemplate: eventsTemplate,
+		},
+		{
+			filename:        "Dockerfile",
+			templateName:    "dockerfileTemplate",
+			templateFile:    dockerfileTemplateFile,
+			builtinTemplate: dockerfileTemplate,
+		},
+		{
+			filename:        "docker-compose.yml",
+			templateName:    "dockerComposeTemplate",
+			templateFile:    dockerComposeTemplateFile,
+			builtinTemplate: dockerComposeTemplate,
+			data: map[string]string{
+				"serviceName": strings.ToLower(filename),
+			},
 		},
 		{
 			filename:        "README.md",

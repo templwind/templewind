@@ -18,10 +18,13 @@ type Config struct {
 
 type Menus map[string][]MenuEntry
 type MenuEntry struct {
-	URL        string
-	Title      string
-	Identifier string
-	Children   []MenuEntry `yaml:"Children,omitempty"`
+	URL         string
+	Title       string
+	MobileTitle string      `yaml:"MobileTitle,omitempty"`
+	InMobile    bool        `yaml:"InMobile,omitempty"`
+	Identifier  string      `yaml:"Identifier,omitempty"`
+	Icon        string      `yaml:"Icon,omitempty"`
+	Children    []MenuEntry `yaml:"Children,omitempty"`
 }
 
 type Assets struct {

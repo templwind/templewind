@@ -12,8 +12,8 @@ const (
 	contextTemplateFile         = "templates/context.tpl"
 	etcTemplateFile             = "templates/etc.tpl"
 	handlerTemplateFile         = "templates/handler.tpl"
-	controllerTemplateFile      = "templates/controller.tpl"
-	controllerTemplTemplateFile = "templates/controller.templ.tpl"
+	logicTemplateFile           = "templates/logic.tpl"
+	logicTemplTemplateFile      = "templates/logic.templ.tpl"
 	mainTemplateFile            = "templates/main.tpl"
 	middlewareImplementCodeFile = "templates/middleware.tpl"
 	routesTemplateFile          = "templates/routes.tpl"
@@ -38,6 +38,9 @@ const (
 	layoutTemplTemplateFile     = "templates/layout.templ.tpl"
 	propsTemplateFile           = "templates/props.tpl"
 	eventsTemplateFile          = "templates/events.tpl"
+	dockerfileTemplateFile      = "templates/dockerfile.tpl"
+	dockerComposeTemplateFile   = "templates/docker-compose.tpl"
+	notFoundHandlerTemplateFile = "templates/404handler.tpl"
 )
 
 var templates = map[string]string{
@@ -45,12 +48,12 @@ var templates = map[string]string{
 	contextTemplateFile:         contextTemplate,
 	etcTemplateFile:             etcTemplate,
 	handlerTemplateFile:         handlerTemplate,
-	controllerTemplateFile:      controllerTemplate,
+	logicTemplateFile:           logicTemplate,
 	mainTemplateFile:            mainTemplate,
 	middlewareImplementCodeFile: middlewareImplementCode,
 	routesTemplateFile:          routesTemplate,
 	routesAdditionTemplateFile:  routesAdditionTemplate,
-	controllerTemplTemplateFile: controllerTemplTemplate,
+	logicTemplTemplateFile:      logicTemplTemplate,
 	typesTemplateFile:           typesTemplate,
 	airTemplateFile:             airTemplate,
 	packageTemplateFile:         packageTemplate,
@@ -71,6 +74,9 @@ var templates = map[string]string{
 	layoutTemplTemplateFile:     layoutTemplTemplate,
 	propsTemplateFile:           propsTemplate,
 	eventsTemplateFile:          eventsTemplate,
+	dockerfileTemplateFile:      dockerfileTemplate,
+	dockerComposeTemplateFile:   dockerComposeTemplate,
+	notFoundHandlerTemplateFile: notFoundHandlerTemplate,
 }
 
 // Category returns the category of the api files.

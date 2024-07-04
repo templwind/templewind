@@ -4,25 +4,25 @@ import (
 	{{.Imports}}
 )
 
-type {{.ControllerType}} struct {
+type {{.LogicType}} struct {
 	logx.Logger
 	ctx    context.Context
 	svcCtx *svc.ServiceContext
 	{{if .HasSocket}}conn   net.Conn{{end}}
 }
 
-func New{{.ControllerType}}(ctx context.Context, svcCtx *svc.ServiceContext{{if .HasSocket}}, conn net.Conn{{end}}) *{{.ControllerType}} {
-	return &{{.ControllerType}}{
+func New{{.LogicType}}(ctx context.Context, svcCtx *svc.ServiceContext{{if .HasSocket}}, conn net.Conn{{end}}) *{{.LogicType}} {
+	return &{{.LogicType}}{
 		Logger: logx.WithContext(ctx),
 		ctx:    ctx,
-		{{if .HasSocket}}conn:   conn,{{end}}
+		{{- if .HasSocket}}conn:   conn,{{end}}
 		svcCtx: svcCtx,
 	}
 }
 
 {{- range .Methods}}
 {{if .HasDoc}}{{.Doc}}{{end}}
-func (l *{{.ControllerType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
+func (l *{{.LogicType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
 	// todo: add your logic here and delete this line
 	{{- if .IsSocket}}
 	{{- if .Topic.InitiatedByServer}}

@@ -111,8 +111,8 @@ func doGenProject(siteFile, dir string) error {
 	logx.Must(genServiceContext(dir, rootPkg, cfg, siteSpec))
 	logx.Must(genTypes(dir, cfg, siteSpec))
 	logx.Must(genRoutes(dir, rootPkg, cfg, siteSpec))
-	logx.Must(genHandlers(dir, rootPkg, cfg, siteSpec))
-	logx.Must(genController(dir, rootPkg, cfg, siteSpec))
+	logx.Must(genHandlers(dir, rootPkg, siteSpec))
+	logx.Must(genLogic(dir, rootPkg, cfg, siteSpec))
 	logx.Must(genLayout(dir, rootPkg, cfg, siteSpec))
 	logx.Must(genMiddleware(dir, cfg, siteSpec))
 	logx.Must(genAir(dir, siteSpec))
@@ -159,7 +159,7 @@ func doGenProject(siteFile, dir string) error {
 			},
 		},
 		{
-			args: []string{"pnpm", "i"},
+			args: []string{"pnpm", "i", "--force"},
 			condition: func() bool {
 				return true // Always run this command
 			},

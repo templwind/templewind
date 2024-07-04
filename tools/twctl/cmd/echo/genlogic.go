@@ -20,20 +20,20 @@ import (
 	"github.com/zeromicro/go-zero/tools/goctl/vars"
 )
 
-//go:embed templates/controller.tpl
-var controllerTemplate string
+//go:embed templates/logic.tpl
+var logicTemplate string
 
-//go:embed templates/controller.templ.tpl
-var controllerTemplTemplate string
+//go:embed templates/logic.templ.tpl
+var logicTemplTemplate string
 
 //go:embed templates/props.tpl
 var propsTemplate string
 
-func genController(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) error {
+func genLogic(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) error {
 	for _, server := range site.Servers {
 		for _, service := range server.Services {
 			for _, handler := range service.Handlers {
-				err := genControllerByHandler(dir, rootPkg, cfg, server, handler)
+				err := genLogicByHandler(dir, rootPkg, cfg, server, handler)
 				if err != nil {
 					return err
 				}
@@ -83,7 +83,7 @@ func addMissingMethods(methods []MethodConfig, dir, subDir, fileName string) err
 // This is the function to generate the method definition based on your template
 func generateMethodDefinition(method MethodConfig) string {
 	tmpl := `{{if .HasDoc}}{{.Doc}}{{end}}
-func (l *{{.ControllerType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
+func (l *{{.LogicType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
 	// todo: add your logic here and delete this line
 
 	{{.ReturnString}}
@@ -103,14 +103,14 @@ func (l *{{.ControllerType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
 	return buf.String()
 }
 
-func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, handler spec.Handler) error {
+func genLogicByHandler(dir, rootPkg string, cfg *config.Config, server spec.Server, handler spec.Handler) error {
 
-	controllerLayout := server.GetAnnotation("template")
+	logicLayout := server.GetAnnotation("template")
 
-	subDir := getControllerFolderPath(server, handler)
+	subDir := getLogicFolderPath(server, handler)
 	filename := path.Join(dir, subDir, strings.ToLower(handler.Name)+".go")
 
-	controllerType := util.ToPascal(getControllerName(handler))
+	logicType := util.ToPascal(getLogicName(handler))
 	// fmt.Println("filename::", filename)
 
 	fileExists := false
@@ -139,7 +139,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		if method.Page != nil {
 			if key, ok := method.Page.Annotation.Properties["template"]; ok {
 				if layoutName, ok := key.(string); ok {
-					controllerLayout = layoutName
+					logicLayout = layoutName
 				}
 			}
 		}
@@ -147,7 +147,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		var responseString string
 		var returnString string
 		var requestString string
-		var controllerName string
+		var logicName string
 		var hasResp bool
 		var hasReq bool
 		var requestType string
@@ -186,8 +186,8 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 					HasDoc:         method.Doc != nil,
 					HasPage:        method.Page != nil,
 					Doc:            "",
-					ControllerName: controllerName,
-					ControllerType: controllerType,
+					LogicName:      logicName,
+					LogicType:      logicType,
 					Call:           call,
 					IsSocket:       method.IsSocket,
 					Topic: Topic{
@@ -241,7 +241,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 				return strings.Join(rParts, ", ")
 			}(requestStringParts)
 
-			controllerName = strings.ToLower(util.ToCamel(handler.Name))
+			logicName = strings.ToLower(util.ToCamel(handler.Name))
 			call = util.ToPascal(strings.TrimSuffix(handlerName, "Handler"))
 
 			// fmt.Println("handlerName:", handlerName)
@@ -257,8 +257,8 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 				HasDoc:         method.Doc != nil,
 				HasPage:        method.Page != nil,
 				Doc:            "",
-				ControllerName: controllerName,
-				ControllerType: controllerType,
+				LogicName:      logicName,
+				LogicType:      logicType,
 				Call:           call,
 				IsSocket:       method.IsSocket,
 			})
@@ -273,7 +273,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 	}
 
 	if requiresTempl {
-		templImports := genTemplImports(rootPkg, strings.ToLower(util.ToCamel(controllerLayout+"Layout")))
+		templImports := genTemplImports(rootPkg, strings.ToLower(util.ToCamel(logicLayout+"Layout")))
 
 		// fmt.Println("templImports", templImports)
 		// templ file first
@@ -282,16 +282,16 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 			dir:             dir,
 			subdir:          subDir,
 			filename:        strings.ToLower(util.ToCamel(handler.Name)) + ".templ",
-			templateName:    "controllerTemplTemplate",
+			templateName:    "logicTemplTemplate",
 			category:        category,
-			templateFile:    controllerTemplTemplateFile,
-			builtinTemplate: controllerTemplTemplate,
+			templateFile:    logicTemplTemplateFile,
+			builtinTemplate: logicTemplTemplate,
 			data: map[string]any{
 				"pkgName":      subDir[strings.LastIndex(subDir, "/")+1:],
 				"templImports": templImports,
 				"templName":    util.ToCamel(handler.Name + "View"),
 				"pageTitle":    util.ToTitle(handler.Name),
-				// "controllerLayout": strings.ToLower(util.ToCamel(controllerLayout + "Layout")),
+				// "logicLayout": strings.ToLower(util.ToCamel(logicLayout + "Layout")),
 			},
 		}); err != nil {
 			return err
@@ -303,7 +303,7 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 			dir:             dir,
 			subdir:          subDir,
 			filename:        "props.go",
-			templateName:    "controllerPropsTemplate",
+			templateName:    "logicPropsTemplate",
 			category:        category,
 			templateFile:    propsTemplateFile,
 			builtinTemplate: propsTemplate,
@@ -317,8 +317,8 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		}
 	}
 
-	imports := genControllerImports(handler, rootPkg)
-	// controllerType := strings.Title(getControllerName(handler))
+	imports := genLogicImports(handler, rootPkg)
+	// logicType := strings.Title(getLogicName(handler))
 
 	// sort.Slice(methods, func(i, j int) bool {
 	// 	return methods[i].Call < methods[j].Call
@@ -328,16 +328,16 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 		dir:             dir,
 		subdir:          subDir,
 		filename:        strings.ToLower(util.ToCamel(handler.Name)) + ".go",
-		templateName:    "controllerTemplate",
+		templateName:    "logicTemplate",
 		category:        category,
-		templateFile:    controllerTemplateFile,
-		builtinTemplate: controllerTemplate,
+		templateFile:    logicTemplateFile,
+		builtinTemplate: logicTemplate,
 		data: map[string]any{
-			"PkgName":        subDir[strings.LastIndex(subDir, "/")+1:],
-			"Imports":        imports,
-			"ControllerType": controllerType,
-			"Methods":        methods,
-			"HasSocket":      hasSocket,
+			"PkgName":   subDir[strings.LastIndex(subDir, "/")+1:],
+			"Imports":   imports,
+			"LogicType": logicType,
+			"Methods":   methods,
+			"HasSocket": hasSocket,
 		},
 	})
 
@@ -345,16 +345,16 @@ func genControllerByHandler(dir, rootPkg string, cfg *config.Config, server spec
 	return err
 }
 
-func getControllerFolderPath(server spec.Server, handler spec.Handler) string {
+func getLogicFolderPath(server spec.Server, handler spec.Handler) string {
 	folder := server.GetAnnotation(types.GroupProperty)
 	if len(folder) == 0 || folder == "/" {
-		return types.ControllerDir
+		return types.LogicDir
 	}
 	folder = strings.TrimPrefix(folder, "/")
 	folder = strings.TrimSuffix(folder, "/")
 	folder = strings.ToLower(util.ToCamel(folder))
 
-	return path.Join(types.ControllerDir, folder, strings.ToLower(util.ToCamel(handler.Name)))
+	return path.Join(types.LogicDir, folder, strings.ToLower(util.ToCamel(handler.Name)))
 }
 
 func genTemplImports(parentPkg, fileName string) string {
@@ -374,7 +374,7 @@ func genPropsImports(parentPkg string) string {
 	return strings.Join(imports, "\n\t")
 }
 
-func genControllerImports(handler spec.Handler, parentPkg string) string {
+func genLogicImports(handler spec.Handler, parentPkg string) string {
 	var imports []string
 
 	requireTemplwind := false

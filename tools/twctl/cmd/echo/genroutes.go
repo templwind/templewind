@@ -53,6 +53,8 @@ func RegisterHandlers(server *echo.Echo, svcCtx *svc.ServiceContext) {
 	)
 
 	{{.routes}}
+
+	server.Any("/*", notfound.NotFoundHandler(svcCtx))
 `
 	timeoutThreshold = time.Millisecond
 )
@@ -139,10 +141,14 @@ func genRoutes(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) err
 		}
 
 		if g.jwtEnabled {
-			g.middlewares = append(g.middlewares, `echojwt.WithConfig(echojwt.Config{
+			jwtMiddleware := `echojwt.WithConfig(echojwt.Config{
 				NewClaimsFunc: func(c echo.Context) jwt.Claims { return new(jwtCustomClaims) },
-				SigningKey: []byte(svcCtx.Config.`+g.authName+`.AccessSecret),
-			}),`)
+				SigningKey: []byte(svcCtx.Config.` + g.authName + `.AccessSecret),
+				TokenLookup:  "cookie:auth",
+			}),`
+
+			// Prepend jwt middleware
+			g.middlewares = append([]string{jwtMiddleware}, g.middlewares...)
 		}
 
 		if err := gt.Execute(&builder, map[string]string{
@@ -187,7 +193,6 @@ func genRoutes(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) err
 func genRouteImports(parentPkg string, site *spec.SiteSpec) string {
 	importSet := collection.NewSet()
 	importSet.AddStr(fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
-	// importSet.AddStr(fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.MiddlewareDir)))
 	hasJwt := false
 	for _, server := range site.Servers {
 		folder := server.GetAnnotation(types.GroupProperty)
@@ -198,8 +203,12 @@ func genRouteImports(parentPkg string, site *spec.SiteSpec) string {
 		if len(jwt) > 0 {
 			hasJwt = true
 		}
-
 	}
+
+	folder := "notfound"
+	importSet.AddStr(fmt.Sprintf("\"%s\"",
+		pathx.JoinPackages(pathx.JoinPackages(parentPkg, types.HandlerDir, folder))))
+
 	imports := importSet.KeysStr()
 	sort.Strings(imports)
 	projectSection := strings.Join(imports, "\n\t")

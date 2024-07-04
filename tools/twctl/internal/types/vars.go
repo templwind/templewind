@@ -6,7 +6,7 @@ const (
 	ConfigDir     = Internal + "config"
 	ContextDir    = Internal + "svc"
 	HandlerDir    = Internal + "handler"
-	ControllerDir = Internal + "controller"
+	LogicDir      = Internal + "logic"
 	EventsDir     = Internal + "events"
 	ViewDir       = Internal + "views"
 	MiddlewareDir = Internal + "middleware"

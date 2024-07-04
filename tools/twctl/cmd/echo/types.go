@@ -19,14 +19,15 @@ type MethodConfig struct {
 	Request          string
 	ReturnString     string
 	ResponseString   string
+	ReturnsPartial   bool
 	HasResp          bool
 	HasReq           bool
 	HandlerName      string
 	HasDoc           bool
 	Doc              string
 	HasPage          bool
-	ControllerName   string
-	ControllerType   string
+	LogicName        string
+	LogicType        string
 	Call             string
 	IsSocket         bool
 	TopicsFromClient []Topic
