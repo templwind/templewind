@@ -283,6 +283,7 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 		imports = append(imports, fmt.Sprintf("footer \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "footer")))
 		imports = append(imports, fmt.Sprintf("head \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "head")))
 		imports = append(imports, fmt.Sprintf("header \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "header")))
+		// imports = append(imports, fmt.Sprintf("menu \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "menu")))
 	}
 
 	imports = append(imports, "\n\n")
@@ -294,7 +295,7 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 
 	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/labstack/echo/v4"))
 	if hasTypes {
-		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/zeromicro/go-zero/rest/httpx"))
+		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind/webserver/httpx"))
 	}
 
 	if hasView {

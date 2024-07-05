@@ -105,11 +105,15 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 			// Send a JSON error response
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 				"error": "Internal Server Error",
+				"msg":   err.Error(),
 			})
 		}
 		
 		{{end}}l := {{.LogicName}}.New{{.LogicType}}(c.Request().Context(), svcCtx)
-		{{if .HasResp}}resp, {{else}}content, {{end}}err := l.{{.Call}}({{if .HasReq}}&req, {{end}}c)
+		{{- if not .ReturnsPartial}}
+		{{if not .HasResp}}baseProps := []templwind.OptFunc[baseof.Props]{}{{end -}}
+		{{end}}
+		{{if .HasResp}}resp, {{else}}content, {{end}}err := l.{{.Call}}(c{{if .HasReq}}, &req{{end}}{{if not .ReturnsPartial}}{{if not .HasResp}}, &baseProps{{end}}{{end}})
 		{{- if .ReturnsPartial}}
 		if err != nil {
 			// Log the error and send a generic error message to the client
@@ -135,6 +139,7 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 			// Send a JSON error response
 			return c.JSON(http.StatusInternalServerError, map[string]interface{}{
 				"error": "Internal Server Error",
+				"msg":   err.Error(),
 			}){{else}}
 			// Send an HTML error response
 			return templwind.Render(c, http.StatusInternalServerError,
@@ -158,31 +163,36 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 		}
 		{{if .HasResp}}
 		return c.JSON(http.StatusOK, resp){{else}}// Assemble the page
+		// Combine default properties and baseProps
+		allProps := append([]templwind.OptFunc[baseof.Props]{
+			baseof.WithLTRDir("ltr"),
+			baseof.WithLangCode("en"),
+			baseof.WithHead(head.New(
+				head.WithSiteTitle(svcCtx.Config.Site.Title),
+				head.WithIsHome(true),
+				head.WithCSS(
+					svcCtx.Config.Assets.CSS...,
+				),
+				head.WithJS(
+					svcCtx.Config.Assets.JS...,
+				),
+			)),
+			baseof.WithHeader(header.New(
+				header.WithBrandName(svcCtx.Config.Site.Title),
+				header.WithLoginURL("/auth/login"),
+				header.WithLoginTitle("Log in"),
+				header.WithMenus(svcCtx.Menus),
+			)),
+			baseof.WithMenus(svcCtx.Menus),
+			baseof.WithFooter(footer.New(
+				footer.WithYear(strconv.Itoa(time.Now().Year())),
+			)),
+			baseof.WithContent(content),
+		}, baseProps...)
+
+		// Render the page with all properties
 		return templwind.Render(c, http.StatusOK,
-			baseof.New(
-				baseof.WithLTRDir("ltr"),
-				baseof.WithLangCode("en"),
-				baseof.WithHead(head.New(
-					head.WithSiteTitle(svcCtx.Config.Site.Title),
-					head.WithIsHome(true),
-					head.WithCSS(
-						svcCtx.Config.Assets.CSS...,
-					),
-					head.WithJS(
-						svcCtx.Config.Assets.JS...,
-					),
-				)),
-				baseof.WithHeader(header.New(
-					header.WithBrandName(svcCtx.Config.Site.Title),
-					header.WithLoginURL("/auth/login"),
-					header.WithLoginTitle("Log in"),
-					header.WithMenus(svcCtx.Menus),
-				)),
-				baseof.WithFooter(footer.New(
-					footer.WithYear(strconv.Itoa(time.Now().Year())),
-				)),
-				baseof.WithContent(content),
-			),
+			baseof.New(allProps...),
 		){{end}}{{end}}{{end}}
 	}
 }{{end}}

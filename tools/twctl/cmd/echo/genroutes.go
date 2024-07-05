@@ -41,6 +41,9 @@ type jwtCustomClaims struct {
 
 func RegisterHandlers(server *echo.Echo, svcCtx *svc.ServiceContext) {
 	{{.routesAdditions}}
+
+	// The following code is used to handle the 404 error.
+	server.Any("/*", notfound.NotFoundHandler(svcCtx))
 }
 `
 
@@ -53,8 +56,6 @@ func RegisterHandlers(server *echo.Echo, svcCtx *svc.ServiceContext) {
 	)
 
 	{{.routes}}
-
-	server.Any("/*", notfound.NotFoundHandler(svcCtx))
 `
 	timeoutThreshold = time.Millisecond
 )
@@ -87,7 +88,7 @@ type (
 	}
 	route struct {
 		method   string
-		path     string
+		route    string
 		handler  string
 		doc      map[string]interface{}
 		isStatic bool
@@ -121,8 +122,8 @@ func genRoutes(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) err
 					`%s.Static("%s", "%s")
 	`,
 					util.ToCamel(g.name)+"Group",
-					r.path,
-					"public"+r.path,
+					r.route,
+					"public"+r.route,
 				))
 			} else {
 				routesBuilder.WriteString(fmt.Sprintf(
@@ -130,7 +131,7 @@ func genRoutes(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) err
 	`,
 					util.ToCamel(g.name)+"Group",
 					mapping[strings.ToLower(r.method)],
-					r.path,
+					r.route,
 					r.handler,
 				))
 			}
@@ -195,7 +196,7 @@ func genRouteImports(parentPkg string, site *spec.SiteSpec) string {
 	importSet.AddStr(fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
 	hasJwt := false
 	for _, server := range site.Servers {
-		folder := server.GetAnnotation(types.GroupProperty)
+		folder := strings.ToLower(server.GetAnnotation(types.GroupProperty))
 		importSet.AddStr(fmt.Sprintf("%s \"%s\"", toPrefix(folder),
 			pathx.JoinPackages(parentPkg, types.HandlerDir, folder)))
 
@@ -225,8 +226,9 @@ func getRoutes(site *spec.SiteSpec) ([]group, error) {
 
 	for _, server := range site.Servers {
 		var groupedRoutes group
-		folder := server.GetAnnotation(types.GroupProperty)
-		groupedRoutes.name = folder
+		folder := strings.ToLower(server.GetAnnotation(types.GroupProperty))
+		// last part of the folder name but it may not include "/"
+		groupedRoutes.name = folder[strings.LastIndex(folder, "/")+1:]
 		for _, s := range server.Services {
 			for _, r := range s.Handlers {
 				// handlerName := getHandlerName(r, nil)
@@ -244,7 +246,7 @@ func getRoutes(site *spec.SiteSpec) ([]group, error) {
 
 					routeObj := route{
 						method:   mapping[strings.ToLower(m.Method)],
-						path:     m.Route,
+						route:    m.Route,
 						handler:  handlerName,
 						doc:      m.DocAnnotation.Properties,
 						isStatic: m.IsStatic,

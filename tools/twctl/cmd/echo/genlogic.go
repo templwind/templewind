@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"text/template"
@@ -227,9 +228,10 @@ func genLogicByHandler(dir, rootPkg string, cfg *config.Config, server spec.Serv
 			handlerName = util.ToTitle(getHandlerName(handler, &method))
 
 			requestStringParts := []string{
-				requestString,
 				"c echo.Context",
+				requestString,
 			}
+			// fmt.Println("\n\nBEFORE :: requestString", requestString)
 			requestString = func(parts []string) string {
 				rParts := make([]string, 0)
 				for _, part := range parts {
@@ -238,13 +240,18 @@ func genLogicByHandler(dir, rootPkg string, cfg *config.Config, server spec.Serv
 					}
 					rParts = append(rParts, strings.TrimSpace(part))
 				}
+				if !method.ReturnsPartial && !hasResp {
+					rParts = append(rParts, "baseProps *[]templwind.OptFunc[baseof.Props]")
+				}
 				return strings.Join(rParts, ", ")
 			}(requestStringParts)
+
+			// fmt.Println("AFTER :: requestString", requestString)
 
 			logicName = strings.ToLower(util.ToCamel(handler.Name))
 			call = util.ToPascal(strings.TrimSuffix(handlerName, "Handler"))
 
-			// fmt.Println("handlerName:", handlerName)
+			// fmt.Println("handlerName:", handlerName, method.ReturnsPartial)
 			methods = append(methods, MethodConfig{
 				HandlerName:    handlerName,
 				RequestType:    requestType,
@@ -261,6 +268,7 @@ func genLogicByHandler(dir, rootPkg string, cfg *config.Config, server spec.Serv
 				LogicType:      logicType,
 				Call:           call,
 				IsSocket:       method.IsSocket,
+				ReturnsPartial: method.ReturnsPartial,
 			})
 		}
 	}
@@ -291,7 +299,6 @@ func genLogicByHandler(dir, rootPkg string, cfg *config.Config, server spec.Serv
 				"templImports": templImports,
 				"templName":    util.ToCamel(handler.Name + "View"),
 				"pageTitle":    util.ToTitle(handler.Name),
-				// "logicLayout": strings.ToLower(util.ToCamel(logicLayout + "Layout")),
 			},
 		}); err != nil {
 			return err
@@ -317,7 +324,7 @@ func genLogicByHandler(dir, rootPkg string, cfg *config.Config, server spec.Serv
 		}
 	}
 
-	imports := genLogicImports(handler, rootPkg)
+	imports := genLogicImports(server, handler, rootPkg)
 	// logicType := strings.Title(getLogicName(handler))
 
 	// sort.Slice(methods, func(i, j int) bool {
@@ -352,7 +359,11 @@ func getLogicFolderPath(server spec.Server, handler spec.Handler) string {
 	}
 	folder = strings.TrimPrefix(folder, "/")
 	folder = strings.TrimSuffix(folder, "/")
-	folder = strings.ToLower(util.ToCamel(folder))
+	// get the last part of the folder
+	parts := strings.Split(folder, "/")
+	// format the last part of the folder
+	parts[len(parts)-1] = strings.ToLower(util.ToCamel(parts[len(parts)-1]))
+	folder = filepath.Join(parts...)
 
 	return path.Join(types.LogicDir, folder, strings.ToLower(util.ToCamel(handler.Name)))
 }
@@ -374,7 +385,14 @@ func genPropsImports(parentPkg string) string {
 	return strings.Join(imports, "\n\t")
 }
 
-func genLogicImports(handler spec.Handler, parentPkg string) string {
+func genLogicImports(server spec.Server, handler spec.Handler, parentPkg string) string {
+	theme := server.GetAnnotation("theme")
+	if len(theme) == 0 {
+		theme = "themes/templwind"
+	} else {
+		theme = "themes/" + theme
+	}
+
 	var imports []string
 
 	requireTemplwind := false
@@ -418,6 +436,9 @@ func genLogicImports(handler spec.Handler, parentPkg string) string {
 	}
 
 	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
+	if requireTemplwind {
+		imports = append(imports, fmt.Sprintf("baseof \"%s\"", pathx.JoinPackages(parentPkg, theme, "layouts/baseof")))
+	}
 
 	if hasType {
 		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.TypesDir)))
@@ -426,10 +447,13 @@ func genLogicImports(handler spec.Handler, parentPkg string) string {
 	imports = append(imports, "\n\n")
 
 	if requireTemplwind {
-		imports = append(imports, fmt.Sprintf("\n\n\"%s\"", "github.com/a-h/templ"))
+		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/a-h/templ"))
 	}
 	if requireEcho {
 		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/labstack/echo/v4"))
+	}
+	if requireTemplwind {
+		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind"))
 	}
 	// TODO: method fix
 

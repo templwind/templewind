@@ -23,8 +23,8 @@ func New{{.LogicType}}(ctx context.Context, svcCtx *svc.ServiceContext{{if .HasS
 {{- range .Methods}}
 {{if .HasDoc}}{{.Doc}}{{end}}
 func (l *{{.LogicType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
-	// todo: add your logic here and delete this line
 	{{- if .IsSocket}}
+	// todo: add your logic here and delete this line
 	{{- if .Topic.InitiatedByServer}}
 	resp := {{.Topic.ResponseType}}{}
 
@@ -34,6 +34,17 @@ func (l *{{.LogicType}}) {{.Call}}({{.Request}}) {{.ResponseType}} {
 	return
 	{{end -}}
 	{{else}}
+	{{- if not .ReturnsPartial}}
+	// todo: uncomment to add your base template properties
+	// note: updated your template include path to use the correct theme
+	
+	// *baseProps = append(*baseProps,
+		// baseof.WithHeader(nil),
+		// baseof.WithFooter(nil),
+	// )
+	{{end}}
+	// todo: add your logic here and delete this line
+
 	{{.ReturnString}}
 	{{end -}}
 }
