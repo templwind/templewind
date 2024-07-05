@@ -6,7 +6,7 @@ import (
 
 {{range .Methods}}
 {{if .HasDoc}}{{.Doc}}{{end}}
-func {{.HandlerName}}(svcCtx *svc.ServiceContext) echo.HandlerFunc {
+func {{.HandlerName}}(svcCtx *svc.ServiceContext, path string) echo.HandlerFunc {
 	{{- if .IsSocket}}	
 	type message struct {
 		Topic   string
@@ -99,7 +99,7 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 		}
 		return nil{{else}}
 		{{- if .HasReq}}var req types.{{.RequestType}}
-		if err := httpx.Parse(c.Request(), &req); err != nil {
+		if err := httpx.Parse(c.Request(), &req, path); err != nil {
 			// Log the error and send a generic error message to the client
 			c.Logger().Error(err)
 			// Send a JSON error response

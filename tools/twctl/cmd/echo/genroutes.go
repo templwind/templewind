@@ -242,7 +242,7 @@ func getRoutes(site *spec.SiteSpec) ([]group, error) {
 						handlerName = toPrefix(folder) + "." + util.ToPascal(handlerName)
 					}
 
-					handlerName = handlerName + "(svcCtx)"
+					handlerName = handlerName + fmt.Sprintf(`(svcCtx, "%s")`, m.Route)
 
 					routeObj := route{
 						method:   mapping[strings.ToLower(m.Method)],

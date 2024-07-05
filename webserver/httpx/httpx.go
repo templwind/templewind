@@ -30,8 +30,8 @@ type Validator interface {
 var validator atomic.Value
 
 // Parse parses the request.
-func Parse(r *http.Request, v any) error {
-	if err := ParsePath(r, v); err != nil {
+func Parse(r *http.Request, v any, pattern string) error {
+	if err := ParsePath(r, v, pattern); err != nil {
 		return err
 	}
 
@@ -140,22 +140,23 @@ func ParseJsonBody(r *http.Request, v any) error {
 }
 
 // ParsePath parses the symbols residing in the URL path.
-// Like http://localhost/bag/:name
-func ParsePath(r *http.Request, v any) error {
+func ParsePath(r *http.Request, v any, pattern string) error {
 	path := r.URL.Path
 	val := reflect.ValueOf(v).Elem()
 	typ := val.Type()
 
 	parts := strings.Split(path, "/")
-	vars := map[string]string{}
+	patternParts := strings.Split(pattern, "/")
 
-	for i := 0; i < len(parts); i++ {
-		part := parts[i]
+	if len(parts) != len(patternParts) {
+		return fmt.Errorf("path does not match pattern")
+	}
+
+	vars := map[string]string{}
+	for i, part := range patternParts {
 		if strings.HasPrefix(part, ":") {
 			varName := part[1:]
-			if i+1 < len(parts) {
-				vars[varName] = parts[i+1]
-			}
+			vars[varName] = parts[i]
 		}
 	}
 
@@ -196,10 +197,13 @@ func ValidateStruct(v any) error {
 		validateTag := fieldType.Tag.Get("validate")
 		optionalTag := fieldType.Tag.Get("optional")
 
-		if validateTag != "" || optionalTag == "" {
-			if err := validateField(field, validateTag); err != nil {
-				return fmt.Errorf("field %s: %w", fieldType.Name, err)
-			}
+		if optionalTag == "" {
+			// Required by default if no `optional` tag is present
+			validateTag = "required," + validateTag
+		}
+
+		if err := validateField(field, validateTag); err != nil {
+			return fmt.Errorf("field %s: %w", fieldType.Name, err)
 		}
 	}
 
