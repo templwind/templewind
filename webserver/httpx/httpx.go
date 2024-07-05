@@ -148,15 +148,23 @@ func ParsePath(r *http.Request, v any, pattern string) error {
 	parts := strings.Split(path, "/")
 	patternParts := strings.Split(pattern, "/")
 
-	if len(parts) != len(patternParts) {
-		return fmt.Errorf("path does not match pattern")
+	// fmt.Println("        PARTS:", parts)
+	// fmt.Println("PATTERN PARTS:", patternParts)
+
+	// Align from the end of the path and the pattern
+	vars := map[string]string{}
+	partsLen := len(parts)
+	patternLen := len(patternParts)
+
+	if partsLen < patternLen {
+		return errors.New("path does not match pattern")
 	}
 
-	vars := map[string]string{}
-	for i, part := range patternParts {
+	for i := 0; i < patternLen; i++ {
+		part := patternParts[patternLen-i-1]
 		if strings.HasPrefix(part, ":") {
 			varName := part[1:]
-			vars[varName] = parts[i]
+			vars[varName] = parts[partsLen-i-1]
 		}
 	}
 
