@@ -232,14 +232,20 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 
 	hasSocket := false
 	hasView := false
+	hasReturnsPartial := false
 	for _, method := range handler.Methods {
 		if method.IsSocket {
 			hasSocket = true
 			continue
 		}
+
+		if method.ReturnsPartial {
+			hasReturnsPartial = true
+			continue
+		}
+
 		if method.Method == "GET" || method.ReturnsPartial {
 			hasView = true
-			break
 		}
 	}
 
@@ -269,10 +275,6 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 	}
 	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
 
-	if hasTypes {
-		// imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, "internal/httpx")))
-	}
-
 	if hasTypes || hasTypesFromSocket {
 		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.TypesDir)))
 	}
@@ -290,6 +292,10 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 		// imports = append(imports, fmt.Sprintf("menu \"%s\"", pathx.JoinPackages(parentPkg, theme, "partials", "menu")))
 	}
 
+	if hasReturnsPartial {
+		imports = append(imports, fmt.Sprintf("error5x \"%s\"", pathx.JoinPackages(parentPkg, theme, "error5x")))
+	}
+
 	imports = append(imports, "\n\n")
 
 	if hasSocket {
@@ -302,8 +308,12 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind/webserver/httpx"))
 	}
 
-	if hasView {
+	if hasView || hasReturnsPartial {
 		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind"))
+	}
+
+	if hasView {
+		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind/htmx"))
 	}
 
 	return strings.Join(imports, "\n\t")

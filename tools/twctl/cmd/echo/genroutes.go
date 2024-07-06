@@ -146,6 +146,10 @@ func genRoutes(dir, rootPkg string, cfg *config.Config, site *spec.SiteSpec) err
 				NewClaimsFunc: func(c echo.Context) jwt.Claims { return new(jwtCustomClaims) },
 				SigningKey: []byte(svcCtx.Config.` + g.authName + `.AccessSecret),
 				TokenLookup:  "cookie:auth",
+				ErrorHandler: func(c echo.Context, err error) error {
+					c.Redirect(302, "/auth/login")
+					return nil
+				},
 			}),`
 
 			// Prepend jwt middleware

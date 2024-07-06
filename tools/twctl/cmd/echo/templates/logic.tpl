@@ -7,15 +7,17 @@ import (
 type {{.LogicType}} struct {
 	logx.Logger
 	ctx    context.Context
-	svcCtx *svc.ServiceContext
-	{{if .HasSocket}}conn   net.Conn{{end}}
+	svcCtx *svc.ServiceContext{{if .HasSocket}}
+	conn   net.Conn
+	{{end -}}
 }
 
 func New{{.LogicType}}(ctx context.Context, svcCtx *svc.ServiceContext{{if .HasSocket}}, conn net.Conn{{end}}) *{{.LogicType}} {
 	return &{{.LogicType}}{
 		Logger: logx.WithContext(ctx),
-		ctx:    ctx,
-		{{- if .HasSocket}}conn:   conn,{{end}}
+		ctx:    ctx,{{if .HasSocket}}
+		conn:   conn,
+		{{end -}}
 		svcCtx: svcCtx,
 	}
 }

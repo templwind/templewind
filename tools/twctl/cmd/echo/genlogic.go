@@ -395,19 +395,28 @@ func genLogicImports(server spec.Server, handler spec.Handler, parentPkg string)
 
 	var imports []string
 
+	requireTempl := false
 	requireTemplwind := false
 	requireEcho := false
 	hasType := false
 	hasSocket := false
 	hasEvents := false
+	hasReturnsPartial := false
 	for _, method := range handler.Methods {
+		if method.ReturnsPartial {
+			hasReturnsPartial = true
+			requireEcho = true
+			requireTempl = true
+			continue
+		}
+
 		// show when the response type is empty
 		if (method.ResponseType == nil || method.ReturnsPartial) && !method.IsSocket {
 			requireTemplwind = true
 			requireEcho = true
 		}
 
-		if method.ResponseType != nil || method.RequestType != nil {
+		if (method.ResponseType != nil || method.RequestType != nil) && !method.ReturnsPartial {
 			hasType = true
 			requireEcho = true
 		}
@@ -446,7 +455,7 @@ func genLogicImports(server spec.Server, handler spec.Handler, parentPkg string)
 
 	imports = append(imports, "\n\n")
 
-	if requireTemplwind {
+	if requireTemplwind || requireTempl {
 		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/a-h/templ"))
 	}
 	if requireEcho {
@@ -455,6 +464,11 @@ func genLogicImports(server spec.Server, handler spec.Handler, parentPkg string)
 	if requireTemplwind {
 		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind"))
 	}
+	if hasReturnsPartial {
+		// imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind"))
+
+	}
+
 	// TODO: method fix
 
 	// if requireTemplwind {

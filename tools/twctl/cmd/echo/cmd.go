@@ -159,6 +159,12 @@ func doGenProject(siteFile, dir string) error {
 			},
 		},
 		{
+			args: []string{"npm", "i", "-g", "pnpm@latest", "--force"},
+			condition: func() bool {
+				return true // Always run this command
+			},
+		},
+		{
 			args: []string{"pnpm", "i", "--force"},
 			condition: func() bool {
 				return true // Always run this command

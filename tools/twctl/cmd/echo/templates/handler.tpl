@@ -39,7 +39,7 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext, path string) echo.HandlerFunc 
 					return err
 				}
 				msg := map[string]interface{}{
-					types.TopicServerUpdateRecordings: payload,
+					types.{{.Topic}}: payload,
 				}
 				out, err := json.Marshal(msg)
 				if err != nil {
@@ -141,6 +141,17 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext, path string) echo.HandlerFunc 
 				"error": "Internal Server Error",
 				"msg":   err.Error(),
 			}){{else}}
+			// intercept htmx requests and just return the error
+			if htmx.IsHtmxRequest(c.Request()) {
+				return templwind.Render(c, http.StatusOK,
+					error5x.New(
+						error5x.WithErrors(
+							"Internal Server Error",
+							err.Error(),
+						),
+					),
+				)
+			}
 			// Send an HTML error response
 			return templwind.Render(c, http.StatusInternalServerError,
 				baseof.New(
@@ -162,7 +173,14 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext, path string) echo.HandlerFunc 
 			){{end}}
 		}
 		{{if .HasResp}}
-		return c.JSON(http.StatusOK, resp){{else}}// Assemble the page
+		return c.JSON(http.StatusOK, resp){{else}}// intercept htmx requests and just return the content
+		if htmx.IsHtmxRequest(c.Request()) {
+			// Render the page with all properties
+			return templwind.Render(c, http.StatusOK,
+				content,
+			)
+		}
+		// Assemble the page
 		// Combine default properties and baseProps
 		allProps := append([]templwind.OptFunc[baseof.Props]{
 			baseof.WithLTRDir("ltr"),

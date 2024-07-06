@@ -11,6 +11,15 @@ func NotFoundHandler(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 			return c.JSON(http.StatusNotFound, map[string]string{"message": "Resource not found"})
 		}
 
+		// intercept htmx requests and just return the error
+		if htmx.IsHtmxRequest(c.Request()) {
+			return templwind.Render(c, http.StatusOK,
+				error4x.New(
+					error4x.WithErrors("Page Not Found"),
+				),
+			)
+		}
+
 		// Render HTML 404 page
 		return templwind.Render(c, http.StatusNotFound,
 			baseof.New(

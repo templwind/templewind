@@ -3,6 +3,7 @@ package templwind
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/a-h/templ"
 	"github.com/labstack/echo/v4"
@@ -47,4 +48,13 @@ func Render(ctx echo.Context, status int, t templ.Component) error {
 	}
 
 	return nil
+}
+
+func ComponentToString(c templ.Component) (string, error) {
+	var sb strings.Builder
+	err := c.Render(context.Background(), &sb)
+	if err != nil {
+		return "", err
+	}
+	return sb.String(), nil
 }
