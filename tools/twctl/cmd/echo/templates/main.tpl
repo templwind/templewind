@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"net/http"
 
 	{{.importPackages}}
 )
@@ -29,8 +30,14 @@ func main() {
 	// Register the handlers
 	handler.RegisterHandlers(server.Echo, svcCtx)
 
+	// remove trailing slash
+	server.Echo.Use(middleware.RemoveTrailingSlashWithConfig(middleware.TrailingSlashConfig{
+		RedirectCode: http.StatusMovedPermanently,
+	}))
+
 	// Add static file serving
 	server.Echo.Static("/assets", "assets")
+	
 
 	// Start the server
 	fmt.Printf("Starting server at %s:%d ...\n", c.Host, c.Port)

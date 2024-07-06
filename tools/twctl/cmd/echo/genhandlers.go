@@ -270,7 +270,7 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 	imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, types.ContextDir)))
 
 	if hasTypes {
-		imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, "internal/httpx")))
+		// imports = append(imports, fmt.Sprintf("\"%s\"", pathx.JoinPackages(parentPkg, "internal/httpx")))
 	}
 
 	if hasTypes || hasTypesFromSocket {
@@ -299,7 +299,7 @@ func genHandlerImports(server spec.Server, handler spec.Handler, parentPkg strin
 
 	imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/labstack/echo/v4"))
 	if hasTypes {
-		// imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind/webserver/httpx"))
+		imports = append(imports, fmt.Sprintf("\"%s\"", "github.com/templwind/templwind/webserver/httpx"))
 	}
 
 	if hasView {

@@ -242,11 +242,13 @@ func getRoutes(site *spec.SiteSpec) ([]group, error) {
 						handlerName = toPrefix(folder) + "." + util.ToPascal(handlerName)
 					}
 
-					handlerName = handlerName + fmt.Sprintf(`(svcCtx, "%s")`, m.Route)
+					mRoute := strings.TrimSuffix(m.Route, "/")
+
+					handlerName = handlerName + fmt.Sprintf(`(svcCtx, "%s")`, mRoute)
 
 					routeObj := route{
 						method:   mapping[strings.ToLower(m.Method)],
-						route:    m.Route,
+						route:    mRoute,
 						handler:  handlerName,
 						doc:      m.DocAnnotation.Properties,
 						isStatic: m.IsStatic,
