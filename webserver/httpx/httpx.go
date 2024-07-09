@@ -99,8 +99,16 @@ func ParseForm(r *http.Request, v any) error {
 		if formTag != "" {
 			formValue := r.FormValue(formTag)
 			if formValue != "" {
-				field.SetString(formValue)
+				if field.Kind() == reflect.String {
+					field.SetString(formValue)
+				} else {
+					return fmt.Errorf("unsupported field type: %s", field.Kind().String())
+				}
+				// fmt.Printf("Set field %s to value %s\n", fieldType.Name, formValue)
 			}
+			// else {
+			// 	fmt.Printf("Form value for tag %s is empty\n", formTag)
+			// }
 		}
 	}
 

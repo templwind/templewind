@@ -28,7 +28,7 @@ func NotFoundHandler(svcCtx *svc.ServiceContext) echo.HandlerFunc {
 				baseof.WithHead(head.New(
 					head.WithSiteTitle(svcCtx.Config.Site.Title),
 					head.WithIsHome(true),
-					head.WithCSS(svcCtx.Config.Assets.CSS...),
+					head.WithCSS(svcCtx.Config.Assets.Main.CSS...),
 				)),
 				baseof.WithHeader(header.New(
 					header.WithBrandName(svcCtx.Config.Site.Title),

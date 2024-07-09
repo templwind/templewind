@@ -149,12 +149,36 @@ func genNpmFiles(dir string, site *spec.SiteSpec) error {
 			},
 		},
 		{
-			filename:        "vite.config.js",
+			filename:        "vite.config.main.js",
 			templateName:    "viteConfigTemplate",
 			templateFile:    viteConfigTemplateFile,
 			builtinTemplate: viteConfigTemplate,
 			data: map[string]string{
 				"serviceName": filename,
+				"exportName":  "main",
+				"port":        "3000",
+			},
+		},
+		{
+			filename:        "vite.config.admin.js",
+			templateName:    "viteConfigTemplate",
+			templateFile:    viteConfigTemplateFile,
+			builtinTemplate: viteConfigTemplate,
+			data: map[string]string{
+				"serviceName": filename,
+				"exportName":  "admin",
+				"port":        "3001",
+			},
+		},
+		{
+			filename:        "vite.config.app.js",
+			templateName:    "viteConfigTemplate",
+			templateFile:    viteConfigTemplateFile,
+			builtinTemplate: viteConfigTemplate,
+			data: map[string]string{
+				"serviceName": filename,
+				"exportName":  "app",
+				"port":        "3002",
 			},
 		},
 		{

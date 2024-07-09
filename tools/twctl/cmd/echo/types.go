@@ -34,4 +34,5 @@ type MethodConfig struct {
 	TopicsFromServer []Topic
 	SocketType       string
 	Topic            Topic
+	AssetGroup       string
 }

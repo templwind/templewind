@@ -59,6 +59,14 @@ func genHandler(dir, rootPkg string, server spec.Server, handler spec.Handler) e
 
 	logicName := strings.ToLower(util.ToCamel(handler.Name))
 
+	// get the assetGroup
+	assetGroup := server.GetAnnotation("assetGroup")
+	if assetGroup == "" {
+		assetGroup = "Main"
+	} else {
+		assetGroup = util.ToPascal(assetGroup)
+	}
+
 	// fmt.Println("logicName:", logicName, handler.Name)
 	// fmt.Println("handlerPath:", filepath.Join(handlerPath, util.ToKebab(handler.Name)))
 
@@ -156,6 +164,7 @@ func genHandler(dir, rootPkg string, server spec.Server, handler spec.Handler) e
 			TopicsFromClient: topicsFromClient,
 			TopicsFromServer: topicsFromServer,
 			ReturnsPartial:   method.ReturnsPartial,
+			AssetGroup:       assetGroup,
 		})
 	}
 

@@ -161,7 +161,7 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext, path string) echo.HandlerFunc 
 						head.WithSiteTitle(svcCtx.Config.Site.Title),
 						head.WithIsHome(true),
 						head.WithCSS(
-							svcCtx.Config.Assets.CSS...,
+							svcCtx.Config.Assets.{{.AssetGroup}}.CSS...,
 						),
 					)),
 					baseof.WithContent(error5x.New(
@@ -189,10 +189,10 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext, path string) echo.HandlerFunc 
 				head.WithSiteTitle(svcCtx.Config.Site.Title),
 				head.WithIsHome(true),
 				head.WithCSS(
-					svcCtx.Config.Assets.CSS...,
+					svcCtx.Config.Assets.{{.AssetGroup}}.CSS...,
 				),
 				head.WithJS(
-					svcCtx.Config.Assets.JS...,
+					svcCtx.Config.Assets.{{.AssetGroup}}.JS...,
 				),
 			)),
 			baseof.WithHeader(header.New(
