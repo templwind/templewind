@@ -28,6 +28,11 @@ func genMiddleware(dir string, cfg *config.Config, site *spec.SiteSpec) error {
 		}
 
 		imports := genMiddlewareImports()
+
+		noCache := false
+		if strings.EqualFold(item, "nocache") {
+			noCache = true
+		}
 		// fmt.Println(imports)
 
 		name := strings.TrimSuffix(item, "Middleware") + "Middleware"
@@ -39,9 +44,10 @@ func genMiddleware(dir string, cfg *config.Config, site *spec.SiteSpec) error {
 			category:        category,
 			templateFile:    middlewareImplementCodeFile,
 			builtinTemplate: middlewareImplementCode,
-			data: map[string]string{
+			data: map[string]interface{}{
 				"name":           util.ToTitle(name),
-				"ImportPackages": imports,
+				"importPackages": imports,
+				"isNoCache":      noCache,
 			},
 		})
 		if err != nil {

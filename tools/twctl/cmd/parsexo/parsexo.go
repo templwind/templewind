@@ -411,6 +411,7 @@ func generateStaticFiles(packageName, outputPath string) error {
 	}
 
 	funcMap := template.FuncMap{
+		"FirstChar":                     firstChar,
 		"GetFunctionParams":             getFunctionParams,
 		"GetFunctionCleanParams":        getFunctionCleanParams,
 		"RemoveDuplicateFunctionMarker": removeDuplicateFunctionMarker,
@@ -479,6 +480,7 @@ func generateModelCode(modelName, fullPackageName string, node *ast.File, functi
 	}
 
 	funcMap := template.FuncMap{
+		"FirstChar":                     firstChar,
 		"GetFunctionParams":             getFunctionParams,
 		"GetFunctionCleanParams":        getFunctionCleanParams,
 		"RemoveDuplicateFunctionMarker": removeDuplicateFunctionMarker,
@@ -956,4 +958,12 @@ func wrapInBackticks(str string) string {
 
 func insertBacktick() string {
 	return "`"
+}
+
+// FirstChar returns the first character of a string.
+func firstChar(s string) string {
+	if len(s) == 0 {
+		return ""
+	}
+	return string(s[0])
 }

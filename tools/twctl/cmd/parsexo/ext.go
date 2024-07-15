@@ -50,7 +50,7 @@ type Search{{.ModelName}}Response struct {
 func Search{{.ModelName}}s(ctx context.Context, db SqlxDB, currentPage, pageSize int64, filter string) (res *Search{{.ModelName}}Response, err error) {
 	var builder = buildsql.NewQueryBuilder()
 	where, orderBy, namedParamMap, err := builder.Build(filter, map[string]interface{}{
-		"t1": {{.ModelName}}{},
+		"{{FirstChar .ModelName}}": {{.ModelName}}{},
 	})
 	if err != nil {
 		return nil, err
@@ -62,14 +62,14 @@ func Search{{.ModelName}}s(ctx context.Context, db SqlxDB, currentPage, pageSize
 
 	// set a default order by
 	if orderBy == "" {
-		orderBy = "ORDER BY t1.id DESC"
+		orderBy = "ORDER BY {{FirstChar .ModelName}}.id DESC"
 	}
-	limit := fmt.Sprintf("LIMIT %d, %d", currentPage*pageSize, pageSize)
+	limit := fmt.Sprintf("LIMIT %d OFFSET %d", currentPage*pageSize, pageSize)
 
 	// field names
 	var fieldNames []string
 	for _, fieldName := range {{.ModelName}}FieldNames {
-		fieldNames = append(fieldNames, fmt.Sprintf("t1.%s as \"%s.%s\"", fieldName, {{$modelName}}TableName, fieldName))
+		fieldNames = append(fieldNames, fmt.Sprintf("{{FirstChar .ModelName}}.%s as \"%s.%s\"", fieldName, {{$modelName}}TableName, fieldName))
 	}
 
 	// fmt.Println("fieldNames:", fieldNames)
@@ -81,7 +81,7 @@ func Search{{.ModelName}}s(ctx context.Context, db SqlxDB, currentPage, pageSize
 			%s,
 			-- stats
 			COUNT(*) OVER() AS "pagingstats.total_records"
-		FROM {{RawTableName .TableName}} t1
+		FROM {{RawTableName .TableName}} {{FirstChar .ModelName}}
 		%s
 		%s
 		%s

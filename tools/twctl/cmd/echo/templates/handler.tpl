@@ -142,7 +142,7 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext, path string) echo.HandlerFunc 
 				"msg":   err.Error(),
 			}){{else}}
 			// intercept htmx requests and just return the error
-			if htmx.IsHtmxRequest(c.Request()) {
+			if htmx.IsHtmxRequest(c.Request()) && !htmx.IsHtmxBoosted(c.Request()) {
 				return templwind.Render(c, http.StatusOK,
 					error5x.New(
 						error5x.WithErrors(
@@ -174,11 +174,15 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext, path string) echo.HandlerFunc 
 		}
 		{{if .HasResp}}
 		return c.JSON(http.StatusOK, resp){{else}}// intercept htmx requests and just return the content
-		if htmx.IsHtmxRequest(c.Request()) {
-			// Render the page with all properties
+		if htmx.IsHtmxRequest(c.Request()) && !htmx.IsHtmxBoosted(c.Request()) {
+			// Render the page with just the content
 			return templwind.Render(c, http.StatusOK,
 				content,
 			)
+		}
+		loginUrl := "/auth/login"
+		if menu, ok := svcCtx.Config.Menus["login"]; ok && len(menu) > 0 {
+			loginUrl = menu[0].URL
 		}
 		// Assemble the page
 		// Combine default properties and baseProps
@@ -196,13 +200,16 @@ func {{.HandlerName}}(svcCtx *svc.ServiceContext, path string) echo.HandlerFunc 
 				),
 			)),
 			baseof.WithHeader(header.New(
+				header.WithConfig(svcCtx.Config),
 				header.WithBrandName(svcCtx.Config.Site.Title),
-				header.WithLoginURL("/auth/login"),
+				header.WithLoginURL(loginUrl),
 				header.WithLoginTitle("Log in"),
 				header.WithMenus(svcCtx.Menus),
 			)),
 			baseof.WithMenus(svcCtx.Menus),
 			baseof.WithFooter(footer.New(
+				footer.WithConfig(svcCtx.Config),
+				footer.WithMenus(svcCtx.Menus),
 				footer.WithYear(strconv.Itoa(time.Now().Year())),
 			)),
 			baseof.WithContent(content),

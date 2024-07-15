@@ -1,0 +1,10 @@
+package alert
+
+templ tpl(props *Props) {
+	<app-alert hide-duration="{props.HideDuration}">
+		<div class="alert alert-{props.Type}">
+			<div>{ props.Message }</div>
+			<button class="close">&times;</button>
+		</div>
+	</app-alert>
+}

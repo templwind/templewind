@@ -62,8 +62,21 @@ var localEnvTemplate string
 //go:embed templates/makefile.tpl
 var makefileTemplate string
 
+//go:embed templates/migrations-dockerfile.tpl
+var migrationsDockerfileTemplate string
+
+//go:embed templates/migrations-healthcheck.tpl
+var migrationsHealthcheckTemplate string
+
+//go:embed templates/migrations-run-migrations.tpl
+var migrationsRunMigrationsTemplate string
+
+//go:embed templates/migrations-docker-compose.tpl
+var migrationsDockerComposeTemplate string
+
 var (
 	srcDir       = "src"
+	dbDir        = "db"
 	migrationDir = "db/migrations"
 	componentDir = filepath.Join(srcDir, "components")
 )
@@ -101,6 +114,7 @@ func genNpmFiles(dir string, site *spec.SiteSpec) error {
 			builtinTemplate: dockerComposeTemplate,
 			data: map[string]string{
 				"serviceName": strings.ToLower(filename),
+				"dsnName":     strings.ToLower(filename),
 			},
 		},
 		{
@@ -238,6 +252,41 @@ func genNpmFiles(dir string, site *spec.SiteSpec) error {
 			builtinTemplate: makefileTemplate,
 			data: map[string]string{
 				"serviceName": strings.ToLower(filename),
+			},
+		},
+		{
+			filename:        "Dockerfile",
+			subdir:          dbDir,
+			templateName:    "dockerfileTemplate",
+			templateFile:    migrationsDockerfileTemplateFile,
+			builtinTemplate: migrationsDockerfileTemplate,
+		},
+		{
+			filename:        "healthcheck.sh",
+			subdir:          dbDir,
+			templateName:    "healthcheckTemplate",
+			templateFile:    migrationsHealthcheckTemplateFile,
+			builtinTemplate: migrationsHealthcheckTemplate,
+		},
+		{
+			filename:        "run-migrations.sh",
+			subdir:          dbDir,
+			templateName:    "runMigrationsTemplate",
+			templateFile:    migrationsRunMigrationsTemplateFile,
+			builtinTemplate: migrationsRunMigrationsTemplate,
+			data: map[string]string{
+				"dsnName": strings.ToLower(filename),
+			},
+		},
+		{
+			filename:        "docker-compose.yml",
+			subdir:          dbDir,
+			templateName:    "dockerComposeTemplate",
+			templateFile:    migrationsDockerComposeTemplateFile,
+			builtinTemplate: migrationsDockerComposeTemplate,
+			data: map[string]string{
+				"serviceName": strings.ToLower(filename),
+				"dsnName":     strings.ToLower(filename),
 			},
 		},
 	}

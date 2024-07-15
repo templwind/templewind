@@ -12,6 +12,10 @@ Assets:
   JS:
     - /assets/js/main.js
 Menus:
+  login:
+    - URL: /app/auth/login
+      Title: Login
+      IsNotHtmx: true
   main:
     - URL: /
       Title: Home

@@ -40,7 +40,9 @@ func WithProps[T any](defaultProps func() *T, props ...OptFunc[T]) *T {
 }
 
 func Render(ctx echo.Context, status int, t templ.Component) error {
-	ctx.Response().Writer.WriteHeader(status)
+	if !ctx.Response().Committed {
+		ctx.Response().WriteHeader(status)
+	}
 
 	err := t.Render(context.Background(), ctx.Response().Writer)
 	if err != nil {
