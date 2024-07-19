@@ -1,0 +1,37 @@
+package appbar
+
+import (
+	"github.com/templwind/templwind/util"
+)
+
+templ tpl(props *Props) {
+	<div
+		class={ util.MergeClasses("app-bar flex flex-col bg-surface-100-800-token space-y-4 p-4 w-full", props.AppBarClasses) }
+		role="toolbar"
+		aria-label="Main navigation toolbar"
+		data-testid="app-bar"
+	>
+		<div
+			class="app-bar-row-main grid items-center grid-cols-[auto_1fr_auto] gap-4"
+		>
+			if props.Lead != nil {
+				<div class={ util.MergeClasses("app-bar-slot-lead flex-none flex justify-between items-center", props.LeadClasses) }>
+					@props.Lead
+				</div>
+			}
+			<div class="app-bar-slot-default flex-auto">
+				{ children... }
+			</div>
+			if props.Trail != nil {
+				<div class={ util.MergeClasses("app-bar-slot-trail flex-none flex items-center space-x-4", props.TrailClasses) }>
+					@props.Trail
+				</div>
+			}
+		</div>
+		if props.Headline != nil {
+			<div class={ util.MergeClasses("app-bar-row-headline", props.HeadlineClasses) }>
+				@props.Headline
+			</div>
+		}
+	</div>
+}

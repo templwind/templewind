@@ -1,0 +1,52 @@
+package link
+
+import (
+	"fmt"
+	"strings"
+)
+
+templ tpl(props *Props) {
+	<a
+		if props.ID != "" {
+			id="{ props.ID }"
+		}
+		if props != nil {
+			if len(props.HXTrigger) > 0 {
+				hx-trigger={ strings.Join(props.HXTrigger, ",") }
+			}
+			if props.HXSwap != "" {
+				hx-swap={ props.HXSwap.String() }
+			}
+			if props.HXTarget != "" {
+				hx-target={ props.HXTarget }
+			}
+			if props.HXGet != "" || props.HXPost != "" || props.HXPut != "" ||  props.HXPatch != "" ||  props.HXDelete != "" {
+				:class="{ 'cursor-pointer hover:shadow-xl': true }"
+				if props.HXGet != "" {
+					href={ templ.SafeURL(props.HXGet) }
+					hx-get={ props.HXGet }
+				}
+				if props.HXPost != "" {
+					hx-post={ props.HXPost }
+				}
+				if props.HXPut != "" {
+					hx-put={ props.HXPut }
+				}
+				if props.HXPatch != "" {
+					hx-patch={ props.HXPatch }
+				}
+				if props.HXDelete != "" {
+					hx-delete={ props.HXDelete }
+				}
+				if props.HXPushURL {
+					hx-push-url="true"
+				}
+			}
+			if props.XOnTrigger != "" {
+				x-on:htmx:trigger={ fmt.Sprintf("%s", props.XOnTrigger) }
+			}
+		}
+	>
+		{ children... }
+	</a>
+}

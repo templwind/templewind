@@ -4,9 +4,9 @@ import { readdirSync } from "fs";
 import dts from "vite-plugin-dts";
 import { libInjectCss } from "vite-plugin-lib-inject-css";
 
-// Function to get all components from the lib/components directory
+// Function to get all components from the pkg/components directory
 function getComponents() {
-  const componentsDir = resolve(__dirname, "lib/components");
+  const componentsDir = resolve(__dirname, "pkg/components");
   const components = readdirSync(componentsDir);
 
   const entry: Record<string, string> = {};
@@ -31,7 +31,7 @@ export default defineConfig({
     copyPublicDir: false,
     lib: {
       entry: {
-        main: resolve(__dirname, "lib/main.ts"),
+        main: resolve(__dirname, "pkg/main.ts"),
         ...entry,
       },
       formats: ["es"],
@@ -39,7 +39,7 @@ export default defineConfig({
     rollupOptions: {
       external: [],
       input: {
-        main: resolve(__dirname, "lib/main.ts"),
+        main: resolve(__dirname, "pkg/main.ts"),
         ...input,
       },
       output: {
