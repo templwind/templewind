@@ -21,6 +21,9 @@ jobs:
       - name: Run go mod tidy
         run: go mod tidy
 
+      - name: Install templ
+        run: go install github.com/a-h/templ/cmd/templ@latest
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -33,7 +36,7 @@ jobs:
         run: pnpm install
 
       - name: Run Makefile commands
-        run: make templ
+        run: make templ-fmt && make templ
 
       - name: Build with Vite
         run: pnpm run build

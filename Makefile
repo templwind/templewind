@@ -39,6 +39,11 @@ css-watch:
 templ: 
 	templ generate
 
+## templ: format templates
+.PHONY: templ-fmt
+templ-fmt: 
+	templ fmt
+
 ## templ-watch: watch templ files and format them
 .PHONY: templ-watch
 templ-watch: 
