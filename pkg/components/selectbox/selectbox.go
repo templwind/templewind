@@ -1,4 +1,4 @@
-package select
+package selectbox
 
 import (
 	"github.com/a-h/templ"

@@ -1,4 +1,4 @@
-package range
+package rangeslider
 
 import (
 	"github.com/a-h/templ"
