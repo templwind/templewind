@@ -22,8 +22,8 @@ var components = []Component{
 	{Name: "filebutton"}, {Name: "file-input"}, {Name: "floating-label"}, {Name: "inputchip"},
 	{Name: "input-field"}, {Name: "radio"}, {Name: "range"}, {Name: "search-input"},
 	{Name: "select"}, {Name: "slider"}, {Name: "textarea"}, {Name: "toggle"},
-	{Name: "alert"}, {Name: "toast"}, {Name: "app-bar"}, {Name: "app-header"}, {Name: "app-shell"},
-	{Name: "app-rail"}, {Name: "drawer"}, {Name: "footer"}, {Name: "header"}, {Name: "sidebar"},
+	{Name: "alert"}, {Name: "toast"}, {Name: "bar"}, {Name: "header"}, {Name: "shell"},
+	{Name: "rail"}, {Name: "drawer"}, {Name: "footer"}, {Name: "header"}, {Name: "sidebar"},
 	{Name: "device-mockups"}, {Name: "breadcrumb"}, {Name: "bottom-navigation"}, {Name: "dropdown"},
 	{Name: "mega-menu"}, {Name: "navbar"}, {Name: "sidenav"}, {Name: "tabs"},
 	{Name: "blockquote"}, {Name: "heading"}, {Name: "hr"}, {Name: "image"}, {Name: "link"},
@@ -108,7 +108,9 @@ templ tpl(props *Props) {
 		}
 
 		// Create <component>.ts
-		tsContent := fmt.Sprintf(`class %s extends HTMLElement {
+		tsContent := fmt.Sprintf(`import './%s.scss';
+
+export class %s extends HTMLElement {
 	constructor() {
 		super();
 	}
@@ -119,7 +121,7 @@ templ tpl(props *Props) {
 }
 
 customElements.define("tw-%s", %s);`,
-			toCamelCase(comp.Name), toCamelCase(comp.Name), comp.Name, toCamelCase(comp.Name))
+			comp.Name, toCamelCase("Tw-"+comp.Name), toCamelCase(comp.Name), comp.Name, toCamelCase("Tw-"+comp.Name))
 		err = createFile(filepath.Join(componentPath, fmt.Sprintf("%s.ts", comp.Name)), tsContent)
 		if err != nil {
 			return err
@@ -135,8 +137,7 @@ customElements.define("tw-%s", %s);`,
 		}
 
 		// Create index.ts
-		indexContent := fmt.Sprintf(`import './%s.scss';
-import './%s';`, comp.Name, comp.Name)
+		indexContent := fmt.Sprintf(`export * from './%s';`, comp.Name)
 		err = createFile(filepath.Join(componentPath, "index.ts"), indexContent)
 		if err != nil {
 			return err
@@ -147,7 +148,6 @@ import './%s';`, comp.Name, comp.Name)
 }
 
 func main() {
-	os.Exit(0)
 	basePath := ""
 	err := createStructure(basePath)
 	if err != nil {

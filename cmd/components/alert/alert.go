@@ -7,9 +7,6 @@ import (
 
 // Props for the alert component
 type Props struct {
-	Type         string // alert type: info, success, warning, error
-	Message      string // alert message
-	HideDuration int    // duration in milliseconds to hide the alert automatically
 }
 
 // New creates a new component
@@ -28,27 +25,5 @@ func WithProps(props ...templwind.OptFunc[Props]) *Props {
 }
 
 func defaultProps() *Props {
-	return &Props{
-		Type:         "info",
-		Message:      "This is an alert",
-		HideDuration: 3000, // default to 3 seconds
-	}
-}
-
-func WithType(t string) templwind.OptFunc[Props] {
-	return func(p *Props) {
-		p.Type = t
-	}
-}
-
-func WithMessage(m string) templwind.OptFunc[Props] {
-	return func(p *Props) {
-		p.Message = m
-	}
-}
-
-func WithHideDuration(d int) templwind.OptFunc[Props] {
-	return func(p *Props) {
-		p.HideDuration = d
-	}
+	return &Props{}
 }

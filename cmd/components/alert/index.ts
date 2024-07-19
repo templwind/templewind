@@ -1,2 +1,1 @@
-import "./alert.scss";
-import "./alert";
+export * from './alert';

@@ -1,0 +1,43 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy-app:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.22
+
+      - name: Run go mod tidy
+        run: go mod tidy
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "21.7.1"
+          cache: "pnpm"
+
+      - name: Install pnpm
+        run: npm install -g pnpm@10.5.0
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Run Makefile commands
+        run: make templ
+
+      - name: Build with Vite
+        run: pnpm run build
+
+      - name: Deploy
+        run: echo "Add your deployment steps here"

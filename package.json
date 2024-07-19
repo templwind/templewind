@@ -1,0 +1,53 @@
+{
+  "name": "@templwind/templwind",
+  "private": false,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "A Tailwind CSS plugin for GoLang templwind components",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/lib/index.d.ts",
+  "files": [
+    "dist",
+    "src",
+    "lib",
+    "themes",
+    "plugin.ts"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "prepare": "vite build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/templwind/templwind.git"
+  },
+  "keywords": [
+    "tailwindcss",
+    "templwind",
+    "templ",
+    "templ.guide",
+    "plugin",
+    "components",
+    "golang"
+  ],
+  "author": "Alma Tuck <833950+localrivet@users.noreply.github.com>",
+  "license": "MIT",
+  "devDependencies": {
+    "@tailwindcss/forms": "^0.5.7",
+    "@tailwindcss/typography": "^0.5.13",
+    "autoprefixer": "^10.4.19",
+    "glob": "^11.0.0",
+    "htmx.org": "^2.0.0",
+    "postcss": "^8.4.39",
+    "sass": "^1.77.4",
+    "tailwindcss": "^3.4.6",
+    "typescript": "^5.2.2",
+    "vite": "^5.3.4",
+    "vite-plugin-dts": "4.0.0-beta.1",
+    "vite-plugin-lib-inject-css": "^2.1.1"
+  },
+  "dependencies": {}
+}
