@@ -2,6 +2,77 @@ package shell
 
 templ tpl(props *Props) {
 	<tw-shell>
-		<div>component</div>
+		<div
+			id={ props.ID }
+			class="flex h-full w-full flex-col overflow-hidden"
+		>
+			if props.Header != nil {
+				<!-- Shell Header -->
+				<header
+					id="shell-header"
+					class="z-10 flex-none"
+				>
+					@props.Header
+				</header>
+			}
+			<!-- Content -->
+			<div class="flex h-full w-full flex-auto overflow-hidden">
+				if props.SidebarLeft != nil {
+					<!-- Sidebar Left -->
+					<aside
+						id="sidebar-left"
+						class="w-auto flex-none overflow-y-auto overflow-x-hidden"
+					>
+						@props.SidebarLeft
+					</aside>
+				}
+				<!-- Page -->
+				<div
+					id="page"
+					class="flex flex-1 flex-col overflow-x-hidden"
+				>
+					if props.PageHeader != nil {
+						<!-- Page Header -->
+						<header
+							id="page-header"
+							class="flex-none overflow-y-auto overflow-x-hidden"
+						>
+							@props.PageHeader
+						</header>
+					}
+					<!-- Page Content -->
+					<main id="page-content" class="flex-auto">
+						{ children... }
+					</main>
+					if props.PageFooter != nil {
+						<!-- Page Footer -->
+						<footer
+							id="page-footer"
+							class="flex-none overflow-y-auto overflow-x-hidden"
+						>
+							@props.PageFooter
+						</footer>
+					}
+				</div>
+				if props.SidebarRight != nil {
+					<!-- Sidebar Right -->
+					<aside
+						id="sidebar-right"
+						class="w-auto flex-none overflow-y-auto overflow-x-hidden"
+					>
+						@props.SidebarRight
+					</aside>
+				}
+			</div>
+		</div>
+		if props.Footer != nil {
+			<!-- Shell Footer -->
+			<footer
+				id="shell-footer"
+				class="flex-none"
+			>
+				@props.Footer
+			</footer>
+		}
 	</tw-shell>
 }

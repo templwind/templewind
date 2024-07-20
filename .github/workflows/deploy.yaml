@@ -41,5 +41,27 @@ jobs:
       - name: Build with Vite
         run: pnpm run build
 
-      - name: Deploy
-        run: echo "Add your deployment steps here"
+      - name: Bump version, commit and tag
+        id: version
+        run: |
+          CURRENT_VERSION=$(jq -r '.version' package.json)
+          echo "Current version: $CURRENT_VERSION"
+          IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+          PATCH=${VERSION_PARTS[2]}
+          NEW_PATCH=$((PATCH + 1))
+          NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$NEW_PATCH"
+          echo "New version: $NEW_VERSION"
+          jq ".version = \"$NEW_VERSION\"" package.json > temp.json && mv temp.json package.json
+          jq ".version = \"$NEW_VERSION\"" package-lock.json > temp-lock.json && mv temp-lock.json package-lock.json
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "Bump version to $NEW_VERSION"
+          git tag "v$NEW_VERSION"
+          git push origin main --tags
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          pnpm publish --access public
