@@ -42,19 +42,32 @@ export default defineConfig({
         main: resolve(__dirname, "pkg/main.ts"),
         ...input,
       },
-      output: {
-        format: "es",
-        assetFileNames: "assets/[name][extname]",
-        entryFileNames: (chunk) => {
-          // Check the chunk name to determine the output directory
-          if (chunk.name === "main") {
-            return "index.js"; // Main entry output directly in the dist folder
-          } else {
-            return "components/[name].js"; // Component outputs in the dist/components folder
-          }
+      output: [
+        {
+          format: "es",
+          entryFileNames: (chunk) => {
+            if (chunk.name === "main") {
+              return "index.esm.js"; // ESM entry output directly in the dist folder
+            } else {
+              return "components/[name].esm.js"; // Component outputs in the dist/components folder
+            }
+          },
+          assetFileNames: "assets/[name][extname]",
+          dir: resolve(__dirname, "dist"),
         },
-        dir: resolve(__dirname, "dist"),
-      },
+        {
+          format: "cjs",
+          entryFileNames: (chunk) => {
+            if (chunk.name === "main") {
+              return "index.cjs.js"; // CommonJS entry output directly in the dist folder
+            } else {
+              return "components/[name].cjs.js"; // Component outputs in the dist/components folder
+            }
+          },
+          assetFileNames: "assets/[name][extname]",
+          dir: resolve(__dirname, "dist"),
+        },
+      ],
     },
   },
 });

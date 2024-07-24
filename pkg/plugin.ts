@@ -66,10 +66,17 @@ function generateUtilities(themeNames: Array<keyof Themes>, themes: Themes) {
   return utilities;
 }
 
-export default plugin(function ({ addBase, addComponents, addUtilities }) {
+const templwind = plugin(function ({ addBase, addComponents, addUtilities }) {
   const themeNames = Object.keys(themes.themes) as Array<keyof Themes>;
 
   addBase(generateThemeStyles(themeNames, themes.themes));
   addComponents(generateComponents(themeNames, themes.themes));
   addUtilities(generateUtilities(themeNames, themes.themes));
 });
+
+export default templwind;
+
+// Add compatibility for CommonJS
+if (typeof module !== "undefined" && typeof module.exports !== "undefined") {
+  module.exports = templwind;
+}
