@@ -1,7 +1,35 @@
 package selectbox
 
 templ tpl(props *Props) {
-	<tw-selectbox>
-		<div>component</div>
-	</tw-selectbox>
+	if props.Label != "" {
+		<label
+			if props.ID != "" {
+				for={ props.ID }
+			}
+			if props.LabelClass != "" {
+				class={ props.LabelClass }
+			}
+		>{ props.Label }</label>
+	}
+	<select
+		if props.ID != "" {
+			id={ props.ID }
+		}
+		if props.Required {
+			required
+		}
+		if props.Class != "" {
+			class={ props.Class }
+		}
+		name={ props.Name }
+	>
+		for _, option := range props.Options {
+			<option
+				value={ option.Value }
+				if option.Value == props.Selected {
+					selected
+				}
+			>{ option.Text }</option>
+		}
+	</select>
 }

@@ -2,7 +2,12 @@ package alert
 
 templ tpl(props *Props) {
 	<tw-alert hide-duration="{props.HideDuration}">
-		<div class="alert alert-{props.Type}">
+		<div
+			if props.ID != "" {
+				id={ props.ID }
+			}
+			class={ "alert", templ.KV("alert-info", props.Type.IsInfo()), templ.KV("alert-success", props.Type.IsSuccess()), templ.KV("alert-warning", props.Type.IsWarning()), templ.KV("alert-error", props.Type.IsError()) }
+		>
 			<div>{ props.Message }</div>
 			<button class="close">&times;</button>
 		</div>
