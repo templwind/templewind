@@ -25,3 +25,6 @@ dist-ssr
 
 /cmd/
 /components
+
+# Ignore npmrc file
+.npmrc

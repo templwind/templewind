@@ -1,8 +1,6 @@
 import "./styles/main.scss";
-import "./themes";
-import "./plugin";
-import "./components";
+import themes from "./themes";
+import plugin from "./plugin";
+import * as components from "./components";
 
-export * from "./themes";
-export * from "./plugin";
-export * from "./components";
+export { themes, plugin, components };
