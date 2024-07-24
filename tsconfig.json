@@ -1,10 +1,10 @@
 {
   "compilerOptions": {
-    "target": "es2017",
+    "target": "es2020",
     "module": "esnext",
     "lib": [
       "dom",
-      "es2017"
+      "es2020"
     ],
     "outDir": "./dist",
     "rootDir": "./",
@@ -13,11 +13,16 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "moduleResolution": "node",
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationDir": "./dist/types",
+    "sourceMap": true,
+    "isolatedModules": true
   },
   "include": [
     "pkg/**/*",
-    "tailwind.config.ts"
+    "tailwind.config.ts",
+    "vite.config.ts"
   ],
   "exclude": [
     "node_modules",

@@ -26,7 +26,14 @@ function getComponents() {
 const { entry, input } = getComponents();
 
 export default defineConfig({
-  plugins: [libInjectCss(), dts({ include: ["lib"] })],
+  plugins: [
+    libInjectCss(),
+    dts({
+      include: ["pkg/**/*.ts"],
+      outDir: "dist/types",
+      insertTypesEntry: true,
+    }),
+  ],
   build: {
     copyPublicDir: false,
     lib: {
@@ -34,7 +41,6 @@ export default defineConfig({
         main: resolve(__dirname, "pkg/main.ts"),
         ...entry,
       },
-      formats: ["es"],
     },
     rollupOptions: {
       external: [],
