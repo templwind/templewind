@@ -1,4 +1,4 @@
-import "./styles/main.scss";
+import "./styles/templwind.scss";
 import themes from "./themes";
 import * as components from "./components";
 import templwind from "./plugin";
