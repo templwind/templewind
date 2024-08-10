@@ -2,6 +2,7 @@ package templwind
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strings"
 
@@ -46,6 +47,7 @@ func Render(ctx echo.Context, status int, t templ.Component) error {
 
 	err := t.Render(context.Background(), ctx.Response().Writer)
 	if err != nil {
+		log.Println(err)
 		return ctx.String(http.StatusInternalServerError, "failed to render response template")
 	}
 
