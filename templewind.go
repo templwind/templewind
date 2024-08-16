@@ -11,6 +11,9 @@ import (
 	"github.com/a-h/templ"
 	"github.com/labstack/echo/v4"
 	"github.com/yuin/goldmark"
+	"github.com/yuin/goldmark/extension"
+	"github.com/yuin/goldmark/parser"
+	"github.com/yuin/goldmark/renderer/html"
 )
 
 // Component interface with generic methods
@@ -74,8 +77,22 @@ func Unsafe(html string) templ.Component {
 }
 
 func Markdown(markdown string) templ.Component {
+	md := goldmark.New(
+		goldmark.WithExtensions(
+			extension.GFM,           // GitHub Flavored Markdown (tables, strikethrough, etc.)
+			extension.Linkify,       // Automatically turns URLs into links
+			extension.Strikethrough, // Strikethrough support
+		),
+		goldmark.WithParserOptions(
+			parser.WithAutoHeadingID(), // Automatically generates heading IDs
+		),
+		goldmark.WithRendererOptions(
+			html.WithUnsafe(), // Allows rendering of raw HTML in Markdown
+		),
+	)
+
 	var buf bytes.Buffer
-	if err := goldmark.Convert([]byte(markdown), &buf); err != nil {
+	if err := md.Convert([]byte(markdown), &buf); err != nil {
 		log.Printf("failed to convert markdown to HTML: %v", err)
 	}
 	return Unsafe(buf.String())
