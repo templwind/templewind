@@ -1,13 +1,16 @@
 package templwind
 
 import (
+	"bytes"
 	"context"
+	"io"
 	"log"
 	"net/http"
 	"strings"
 
 	"github.com/a-h/templ"
 	"github.com/labstack/echo/v4"
+	"github.com/yuin/goldmark"
 )
 
 // Component interface with generic methods
@@ -61,4 +64,19 @@ func ComponentToString(c templ.Component) (string, error) {
 		return "", err
 	}
 	return sb.String(), nil
+}
+
+func Unsafe(html string) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+		_, err = io.WriteString(w, html)
+		return
+	})
+}
+
+func Markdown(markdown string) templ.Component {
+	var buf bytes.Buffer
+	if err := goldmark.Convert([]byte(markdown), &buf); err != nil {
+		log.Printf("failed to convert markdown to HTML: %v", err)
+	}
+	return Unsafe(buf.String())
 }
