@@ -37,13 +37,23 @@ func NewWithProps[T any](tpl func(*T) templ.Component, props *T) templ.Component
 	return tpl(props)
 }
 
+// shallowCopy creates a shallow copy of the given value
+func shallowCopy[T any](src *T) *T {
+	if src == nil {
+		return nil
+	}
+	copy := *src
+	return &copy
+}
+
 // WithProps constructs the props with the given prop functions
 func WithProps[T any](defaultProps func() *T, props ...OptFunc[T]) *T {
 	defaults := defaultProps()
+	copy := shallowCopy(defaults)
 	for _, propFn := range props {
-		propFn(defaults)
+		propFn(copy)
 	}
-	return defaults
+	return copy
 }
 
 func Render(ctx echo.Context, status int, t templ.Component) error {
