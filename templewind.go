@@ -27,7 +27,7 @@ type Component[T any] interface {
 type OptFunc[T any] func(*T)
 
 // New creates a new templ.Component with the given props
-func New[T any](defaultProps func() *T, tpl func(*T) templ.Component, props ...OptFunc[*T]) templ.Component {
+func New[T any](defaultProps func() *T, tpl func(*T) templ.Component, props ...OptFunc[T]) templ.Component {
 	prop := WithProps(defaultProps, props...)
 	return tpl(prop)
 }
@@ -38,10 +38,10 @@ func NewWithProps[T any](tpl func(*T) templ.Component, props *T) templ.Component
 }
 
 // WithProps constructs the props with the given prop functions
-func WithProps[T any](defaultProps func() *T, props ...OptFunc[*T]) *T {
+func WithProps[T any](defaultProps func() *T, props ...OptFunc[T]) *T {
 	defaults := defaultProps()
 	for _, propFn := range props {
-		propFn(&defaults)
+		propFn(defaults)
 	}
 	return defaults
 }
