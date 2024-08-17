@@ -3,7 +3,6 @@ package templwind
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -30,7 +29,6 @@ type OptFunc[T any] func(*T)
 // New creates a new templ.Component with the given props
 func New[T any](defaultProps func() *T, tpl func(*T) templ.Component, props ...OptFunc[T]) templ.Component {
 	prop := WithProps(defaultProps, props...)
-	fmt.Printf("prop: %v\n", prop)
 	return tpl(prop)
 }
 
