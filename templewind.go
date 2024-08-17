@@ -27,7 +27,7 @@ type Component[T any] interface {
 type OptFunc[T any] func(*T)
 
 // New creates a new templ.Component with the given props
-func New[T any](defaultProps func() *T, tpl func(*T) templ.Component, props ...OptFunc[T]) templ.Component {
+func New[T any](defaultProps func() *T, tpl func(*T) templ.Component, props ...OptFunc[*T]) templ.Component {
 	prop := WithProps(defaultProps, props...)
 	return tpl(prop)
 }
@@ -37,23 +37,13 @@ func NewWithProps[T any](tpl func(*T) templ.Component, props *T) templ.Component
 	return tpl(props)
 }
 
-// shallowCopy creates a shallow copy of the given value
-func shallowCopy[T any](src *T) *T {
-	if src == nil {
-		return nil
-	}
-	copy := *src
-	return &copy
-}
-
 // WithProps constructs the props with the given prop functions
-func WithProps[T any](defaultProps func() *T, props ...OptFunc[T]) *T {
+func WithProps[T any](defaultProps func() *T, props ...OptFunc[*T]) *T {
 	defaults := defaultProps()
-	copy := shallowCopy(defaults)
 	for _, propFn := range props {
-		propFn(copy)
+		propFn(&defaults)
 	}
-	return copy
+	return defaults
 }
 
 func Render(ctx echo.Context, status int, t templ.Component) error {
